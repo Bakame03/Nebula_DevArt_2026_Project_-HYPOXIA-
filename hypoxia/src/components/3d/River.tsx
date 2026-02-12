@@ -126,7 +126,7 @@ export default function River() {
       // Height adjustment relative to terrain
       // Stress 0 -> y = -1.3 (User High Water)
       // Stress 1 -> y = -3.3 (Low Water)
-      const waterHeight = 2.4 * (1 - stressLevel);
+      const waterHeight = 2.3 * (1 - stressLevel);
       meshRef.current.position.y = -3.3 + waterHeight;
     }
   });

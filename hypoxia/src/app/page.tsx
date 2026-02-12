@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import { Environment, ContactShadows } from "@react-three/drei";
 import { useStore } from "@/store/useStore";
 import PromptInput from "@/components/ui/PromptInput";
@@ -11,24 +12,31 @@ import River from "@/components/3d/River";
 import Forest from "@/components/3d/Forest";
 import Decorations from "@/components/3d/Decorations";
 import Animals from "@/components/3d/Animals";
+import Birds from "@/components/3d/Birds";
 import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocessing";
 
 function SceneLight() {
   const stress = useStore(s => s.stressLevel);
+  const light = React.useRef<THREE.DirectionalLight>(null);
+
+  useFrame(() => {
+    if (light.current) {
+      const color = new THREE.Color("#fff7ed").lerp(new THREE.Color("#EF4444"), stress);
+      light.current.color = color;
+    }
+  });
 
   return (
     <>
-      {/* Ambiance Mystique (Mystic Mist) */}
-      <ambientLight intensity={0.6 - (stress * 0.3)} color="#c7d2fe" />
+      <ambientLight intensity={0.6 - (stress * 0.4)} color="#c7d2fe" />
 
-      {/* Rayons Solaires (God Rays from Top-Left) */}
       <directionalLight
+        ref={light}
         position={[-50, 40, -40]} // Top-Left-Back
-        intensity={2.5 - (stress * 1.0)} // Strong sunlight
+        intensity={2.5}
         castShadow
-        color="#fff7ed" // Warm Sunlight
         shadow-bias={-0.0005}
-        shadow-mapSize={[4096, 4096]} // High Res Shadows for God Rays
+        shadow-mapSize={[4096, 4096]}
       >
         <orthographicCamera attach="shadow-camera" args={[-100, 100, 100, -100]} />
       </directionalLight>
@@ -108,6 +116,7 @@ export default function Home() {
           <Decorations />
           <Forest />
           <Animals />
+          <Birds />
 
           {/* Contact Shadows for Ground Realism */}
           <ContactShadows
