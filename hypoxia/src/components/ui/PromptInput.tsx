@@ -1,54 +1,66 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import type { Variants } from "framer-motion";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/store/useStore";
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
-const shakeVariant = {
+const shakeVariants: Variants = {
+  idle: { x: 0, rotate: 0 },
   shake: {
-    x: [0, -4, 4, -6, 6, -3, 3, 0],
-    transition: { duration: 0.4, repeat: Infinity, repeatType: "mirror" as const },
-  },
-  idle: { x: 0 },
-};
-
-const alertVariant: Variants = {
-  initial: { opacity: 0, scale: 0.85, filter: "blur(12px)" },
-  animate: {
-    opacity: [0.7, 1, 0.7],
-    scale: [0.98, 1.02, 0.98],
-    filter: "blur(0px)",
+    x: [0, -3, 5, -5, 4, -2, 2, 0],
+    rotate: [0, -0.3, 0.3, -0.2, 0.2, 0],
     transition: {
-      opacity: { duration: 0.6, repeat: Infinity, ease: "easeInOut" as const },
-      scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" as const },
-      filter: { duration: 0.3 },
+      duration: 0.35,
+      repeat: Infinity,
+      repeatType: "mirror" as const,
     },
   },
-  exit: { opacity: 0, scale: 0.8, filter: "blur(16px)", transition: { duration: 0.3 } },
 };
 
-const hudVariant: Variants = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" as const } },
-  exit: { opacity: 0, y: 20, transition: { duration: 0.3 } },
+const alertVariants: Variants = {
+  initial: { opacity: 0, scale: 0.7, filter: "blur(20px)" },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: { type: "spring" as const, stiffness: 300, damping: 20 },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.8,
+    filter: "blur(16px)",
+    transition: { duration: 0.25 },
+  },
+};
+
+const pulseVariants: Variants = {
+  idle: { opacity: 1 },
+  critical: {
+    opacity: [1, 0.3, 1],
+    transition: {
+      duration: 0.6,
+      repeat: Infinity,
+      ease: "easeInOut" as const,
+    },
+  },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getStressColor(stress: number): string {
-  if (stress > 0.8) return "#ff0040"; // Neon red — critical
-  if (stress > 0.5) return "#ff6a00"; // Warning orange
-  if (stress > 0.3) return "#ffcc00"; // Caution yellow
-  return "#00ffaa"; // Safe — cyan/green
+function getBarColor(corruption: number): string {
+  if (corruption > 0.9) return "#ff0040";
+  if (corruption > 0.6) return "#ff8c00";
+  if (corruption > 0.3) return "#ffcc00";
+  return "#00ffaa";
 }
 
-function getIntegrityLabel(stress: number): string {
-  if (stress > 0.9) return "CRITICAL";
-  if (stress > 0.7) return "DEGRADED";
-  if (stress > 0.4) return "UNSTABLE";
+function getIntegrityTag(corruption: number): string {
+  if (corruption > 0.9) return "MELTDOWN";
+  if (corruption > 0.6) return "DEGRADED";
+  if (corruption > 0.3) return "UNSTABLE";
   return "NOMINAL";
 }
 
@@ -59,206 +71,247 @@ export default function PromptInput() {
 
   const promptText = useStore((s) => s.promptText);
   const stressLevel = useStore((s) => s.stressLevel);
-  const maxChars = useStore((s) => s.maxChars);
   const permanentDamage = useStore((s) => s.permanentDamage);
+  const maxChars = useStore((s) => s.maxChars);
   const setPrompt = useStore((s) => s.setPrompt);
 
-  const integrity = Math.max(1 - stressLevel, 0);
+  // Corruption = sum of immediate stress + permanent scar, capped at 1
+  const corruption = useMemo(
+    () => Math.min(stressLevel + permanentDamage, 1),
+    [stressLevel, permanentDamage],
+  );
+
+  const integrity = Math.max(1 - corruption, 0);
   const charCount = promptText.length;
-  const color = getStressColor(stressLevel);
+  const barColor = getBarColor(corruption);
+  const isCritical = corruption > 0.8;
+  const isMeltdown = corruption > 0.9;
+  const isOxygenDepleted = corruption > 0.95;
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const val = e.target.value;
-      if (val.length <= maxChars) setPrompt(val);
+      if (e.target.value.length <= maxChars) {
+        setPrompt(e.target.value);
+      }
     },
     [maxChars, setPrompt],
   );
 
   return (
-    <div
-      className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden"
-      onClick={() => textareaRef.current?.focus()}
-    >
-      {/* ── Ambient stress glow ─────────────────────────────────────────── */}
+    <>
+      {/* ── Ambient vignette that intensifies with corruption ──────────── */}
       <motion.div
-        className="pointer-events-none absolute inset-0 z-0"
+        className="pointer-events-none fixed inset-0 z-40"
         animate={{
-          background: `radial-gradient(ellipse at center, ${color}${Math.round(stressLevel * 25)
-            .toString(16)
-            .padStart(2, "0")} 0%, transparent 70%)`,
+          background: isMeltdown
+            ? "radial-gradient(ellipse at bottom center, rgba(255,0,64,0.12) 0%, transparent 70%)"
+            : "radial-gradient(ellipse at bottom center, transparent 0%, transparent 100%)",
         }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.8 }}
       />
 
-      {/* ── Scanline overlay ────────────────────────────────────────────── */}
-      <div
-        className="pointer-events-none absolute inset-0 z-10 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.05) 2px, rgba(255,255,255,0.05) 4px)",
-        }}
-      />
-
-      {/* ── Central Textarea ────────────────────────────────────────────── */}
+      {/* ── Floating Chat Bar ─────────────────────────────────────────── */}
       <motion.div
-        className="relative z-20 flex w-full max-w-4xl flex-col items-center px-6"
-        variants={shakeVariant}
-        animate={stressLevel > 0.8 ? "shake" : "idle"}
+        className="fixed bottom-6 left-1/2 z-50 w-[92%] max-w-3xl -translate-x-1/2"
+        variants={shakeVariants}
+        animate={isCritical ? "shake" : "idle"}
       >
-        <textarea
-          ref={textareaRef}
-          value={promptText}
-          onChange={handleChange}
-          maxLength={maxChars}
-          rows={5}
-          placeholder="TYPE AND WATCH THE SYSTEM BREATHE..."
-          spellCheck={false}
-          autoFocus
-          className="w-full resize-none bg-transparent text-center font-bold leading-tight tracking-wide text-white caret-white outline-none placeholder:text-white/20"
-          style={{
-            fontSize: "clamp(1.5rem, 4vw, 2.75rem)",
-            filter: stressLevel > 0.5 ? `blur(${(stressLevel - 0.5) * 3}px)` : "none",
-            color: stressLevel > 0.8 ? "#ff0040" : "#ffffff",
-            textShadow:
-              stressLevel > 0.8
-                ? "0 0 20px rgba(255,0,64,0.7), 0 0 40px rgba(255,0,64,0.3)"
-                : stressLevel > 0.5
-                  ? "0 0 10px rgba(255,106,0,0.3)"
-                  : "none",
-            transition: "filter 0.3s ease, color 0.3s ease, text-shadow 0.3s ease",
-          }}
-        />
-      </motion.div>
-
-      {/* ── HUD ─────────────────────────────────────────────────────────── */}
-      <motion.div
-        className="glass-panel absolute bottom-8 left-1/2 z-30 flex -translate-x-1/2 items-center gap-8 rounded-full border border-white/[0.06] px-8 py-3"
-        variants={hudVariant}
-        initial="initial"
-        animate="animate"
-      >
-        {/* System Integrity Bar */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between gap-4">
+        {/* ── SYSTEM INTEGRITY bar (above the input) ───────────────────── */}
+        <div className="mb-2 px-1">
+          <div className="flex items-center justify-between">
             <span
-              className="text-[10px] font-semibold uppercase tracking-[0.2em]"
-              style={{ color }}
+              className="text-[9px] font-bold uppercase tracking-[0.25em]"
+              style={{ color: barColor }}
             >
               System Integrity
             </span>
-            <span
-              className="font-mono text-[10px] font-bold uppercase tracking-wider"
-              style={{ color }}
+            <motion.span
+              className="font-mono text-[9px] font-bold uppercase tracking-wider"
+              style={{ color: barColor }}
+              variants={pulseVariants}
+              animate={isMeltdown ? "critical" : "idle"}
             >
-              {getIntegrityLabel(stressLevel)}
-            </span>
+              {getIntegrityTag(corruption)}
+            </motion.span>
           </div>
-          <div className="h-[3px] w-48 overflow-hidden rounded-full bg-white/10">
+
+          {/* Progress track */}
+          <div className="mt-1 h-[2px] w-full overflow-hidden rounded-full bg-white/[0.06]">
             <motion.div
               className="h-full rounded-full"
-              style={{ backgroundColor: color }}
-              animate={{ width: `${integrity * 100}%` }}
-              transition={{ type: "spring", stiffness: 120, damping: 20 }}
+              style={{ backgroundColor: barColor }}
+              animate={{
+                width: `${integrity * 100}%`,
+                boxShadow: isMeltdown
+                  ? `0 0 12px ${barColor}, 0 0 24px ${barColor}40`
+                  : `0 0 6px ${barColor}60`,
+              }}
+              transition={{ type: "spring", stiffness: 100, damping: 18 }}
             />
           </div>
         </div>
 
-        {/* Separator */}
-        <div className="h-6 w-px bg-white/10" />
+        {/* ── Glass Input Container ────────────────────────────────────── */}
+        <div
+          className="relative overflow-hidden rounded-2xl border backdrop-blur-xl"
+          style={{
+            background: "rgba(0, 0, 0, 0.30)",
+            borderColor: isMeltdown
+              ? "rgba(255, 0, 64, 0.25)"
+              : "rgba(255, 255, 255, 0.10)",
+            boxShadow: isMeltdown
+              ? "0 0 40px rgba(255,0,64,0.08), inset 0 0 30px rgba(255,0,64,0.03)"
+              : "0 8px 32px rgba(0,0,0,0.4)",
+            transition: "border-color 0.4s ease, box-shadow 0.5s ease",
+          }}
+        >
+          {/* Scanline noise overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 z-10 opacity-[0.025]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.04) 2px, rgba(255,255,255,0.04) 4px)",
+            }}
+          />
 
-        {/* Token counter */}
-        <div className="flex items-center gap-2">
-          <span
-            className="font-mono text-sm font-bold tabular-nums tracking-wider"
-            style={{ color }}
-          >
-            {String(charCount).padStart(3, "0")}
-          </span>
-          <span className="font-mono text-sm text-white/30">/ {maxChars}</span>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20">
-            Tokens
-          </span>
-        </div>
+          {/* Inner layout: textarea + meta row */}
+          <div className="relative z-20 flex flex-col gap-2 p-4">
+            <textarea
+              ref={textareaRef}
+              value={promptText}
+              onChange={handleChange}
+              maxLength={maxChars}
+              rows={2}
+              placeholder="Commence à taper... le système respire encore."
+              spellCheck={false}
+              autoFocus
+              className="w-full resize-none bg-transparent text-base font-medium leading-relaxed tracking-wide text-white outline-none placeholder:text-white/20"
+              style={{
+                color: isCritical ? "#ff0040" : "#ffffff",
+                filter: isCritical ? "blur(0.8px)" : "none",
+                textShadow: isCritical
+                  ? "0 0 8px rgba(255,0,64,0.5)"
+                  : "none",
+                transition:
+                  "color 0.3s ease, filter 0.3s ease, text-shadow 0.3s ease",
+              }}
+            />
 
-        {/* Separator */}
-        <div className="h-6 w-px bg-white/10" />
+            {/* Meta row: Écho + token counter */}
+            <div className="flex items-center justify-between">
+              {/* Écho indicator */}
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">
+                  Écho
+                </span>
+                <span
+                  className="font-mono text-[10px] font-bold tabular-nums"
+                  style={{
+                    color:
+                      permanentDamage > 0
+                        ? "#ff0040"
+                        : "rgba(255,255,255,0.20)",
+                  }}
+                >
+                  {(permanentDamage * 100).toFixed(1)}%
+                </span>
+              </div>
 
-        {/* Permanent Damage indicator */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30">
-            Écho
-          </span>
-          <span
-            className="font-mono text-xs font-bold tabular-nums"
-            style={{ color: permanentDamage > 0 ? "#ff0040" : "rgba(255,255,255,0.25)" }}
-          >
-            {(permanentDamage * 100).toFixed(1)}%
-          </span>
+              {/* Token counter */}
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="font-mono text-xs font-bold tabular-nums tracking-wider"
+                  style={{ color: barColor }}
+                >
+                  {String(charCount).padStart(3, "0")}
+                </span>
+                <span className="font-mono text-xs text-white/25">
+                  / {maxChars}
+                </span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-white/15">
+                  Tokens
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </motion.div>
 
-      {/* ── Critical Alert — "The Jumpscare" ────────────────────────────── */}
+      {/* ── OXYGEN CRITICAL — Full-screen Alert ───────────────────────── */}
       <AnimatePresence>
-        {stressLevel > 0.9 && (
+        {isOxygenDepleted && (
           <motion.div
-            key="system-failure"
-            className="absolute inset-0 z-50 flex flex-col items-center justify-center"
-            variants={alertVariant}
+            key="oxygen-critical"
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center"
+            variants={alertVariants}
             initial="initial"
             animate="animate"
             exit="exit"
           >
-            {/* Blood-red vignette */}
+            {/* Red vignette */}
             <div
               className="pointer-events-none absolute inset-0"
               style={{
                 background:
-                  "radial-gradient(ellipse at center, transparent 30%, rgba(255,0,64,0.15) 100%)",
+                  "radial-gradient(ellipse at center, transparent 20%, rgba(255,0,64,0.18) 100%)",
               }}
             />
 
-            {/* Glitch line */}
+            {/* Horizontal glitch scanline */}
             <motion.div
-              className="absolute left-0 right-0 h-px bg-red-500/60"
-              animate={{ top: ["10%", "90%", "10%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="pointer-events-none absolute left-0 right-0 h-px"
+              style={{ backgroundColor: "rgba(255,0,64,0.5)" }}
+              animate={{ top: ["5%", "95%", "5%"] }}
+              transition={{
+                duration: 1.8,
+                repeat: Infinity,
+                ease: "linear",
+              }}
             />
 
-            {/* Main warning */}
+            {/* Warning content */}
             <div className="relative select-none text-center">
               <motion.p
-                className="text-6xl font-black tracking-widest md:text-8xl"
+                className="text-7xl font-black tracking-widest md:text-9xl"
                 style={{
                   color: "#ff0040",
                   textShadow:
-                    "0 0 30px rgba(255,0,64,0.8), 0 0 60px rgba(255,0,64,0.4), 0 0 120px rgba(255,0,64,0.2)",
+                    "0 0 40px rgba(255,0,64,0.9), 0 0 80px rgba(255,0,64,0.4), 0 0 160px rgba(255,0,64,0.15)",
                 }}
-                animate={{ opacity: [1, 0.6, 1] }}
-                transition={{ duration: 0.15, repeat: Infinity }}
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{
+                  duration: 0.12,
+                  repeat: Infinity,
+                }}
               >
                 ⚠
               </motion.p>
+
               <p
-                className="mt-4 font-mono text-sm font-bold uppercase tracking-[0.3em] md:text-base"
+                className="mt-4 font-mono text-sm font-bold uppercase tracking-[0.35em] md:text-lg"
                 style={{
                   color: "#ff0040",
-                  textShadow: "0 0 15px rgba(255,0,64,0.6)",
+                  textShadow: "0 0 20px rgba(255,0,64,0.7)",
                 }}
               >
-                System Failure — Oxygen Depleted
+                Oxygen Critical
               </p>
+
               <motion.p
-                className="mt-2 font-mono text-[10px] uppercase tracking-[0.4em] text-white/30"
-                animate={{ opacity: [0.3, 0.8, 0.3] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
+                className="mt-2 font-mono text-[10px] uppercase tracking-[0.5em] text-white/30"
+                animate={{ opacity: [0.2, 0.7, 0.2] }}
+                transition={{
+                  duration: 1.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               >
-                Irreversible damage detected
+                Damage irreversible — System collapse imminent
               </motion.p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

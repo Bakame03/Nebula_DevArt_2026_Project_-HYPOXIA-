@@ -8,18 +8,19 @@ const MAX_PERMANENT_DAMAGE = 0.5;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface HypoxiaState {
-  /** Current prompt text entered by the user */
+  /** Current prompt text entered by the user. */
   promptText: string;
 
   /**
-   * Effective stress level visible to components.
-   * = clamp(rawStress + permanentDamage, 0, 1)
+   * Effective stress level exposed to components.
+   * Always >= permanentDamage (the system never fully heals).
+   * Range: [0, 1].
    */
   stressLevel: number;
 
   /**
    * Ecological scar — "L'Écho".
-   * Accumulates irreversibly when the system enters the critical zone.
+   * Accumulates irreversibly when the system enters the critical zone (> 0.75).
    * Capped at MAX_PERMANENT_DAMAGE (0.5).
    */
   permanentDamage: number;
@@ -56,8 +57,9 @@ export const useStore = create<HypoxiaState>()((set, get) => ({
       nextDamage = Math.min(prevDamage + DAMAGE_INCREMENT, MAX_PERMANENT_DAMAGE);
     }
 
-    // 3. Effective stress: raw + scar, clamped to [0, 1]
-    const effectiveStress = Math.min(rawStress + nextDamage, 1);
+    // 3. Display rule: stress never drops below the scar
+    //    The system never fully heals.
+    const effectiveStress = Math.min(Math.max(rawStress, nextDamage), 1);
 
     set({
       promptText: text,

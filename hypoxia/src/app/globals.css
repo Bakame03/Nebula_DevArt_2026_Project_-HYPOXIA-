@@ -2,23 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Base Reset ──────────────────────────────────────────────────────────── */
 html,
 body {
   height: 100%;
   width: 100%;
   margin: 0;
   padding: 0;
-  background-color: #000000;
-  color: white;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+  background-color: #020617;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   overflow: hidden;
 }
 
-/* Utility class: semi-transparent glass panel */
+/* ─── Scrollbar Hider ─────────────────────────────────────────────────────── */
+
+/* Chrome, Edge, Safari */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox */
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Fallback: also hide on the textarea element directly */
+textarea::-webkit-scrollbar {
+  display: none;
+}
+
+textarea {
+  scrollbar-width: none;
+}
+
+/* ─── Glass Panel Utility ─────────────────────────────────────────────────── */
 .glass-panel {
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  /* Safari support */
+  background-color: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
