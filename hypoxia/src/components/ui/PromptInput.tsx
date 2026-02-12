@@ -120,13 +120,13 @@ export default function PromptInput() {
 
       {/* ── Shakeable wrapper — only the bar is interactive ──────────────── */}
       <motion.div
-        className="pointer-events-auto w-[95%] max-w-4xl"
+        className="pointer-events-auto w-[90%] max-w-xl"
         variants={shakeVariants}
         animate={isCritical ? "shake" : "idle"}
       >
         {/* ── Liquid Glass Bar ──────────────────────────────────────────── */}
         <div
-          className="relative flex items-center gap-3 rounded-[2rem] border px-4 py-3"
+          className="relative flex flex-col gap-3 rounded-[2rem] border px-5 py-4"
           style={{
             background: isCritical
               ? "rgba(255, 10, 40, 0.06)"
@@ -159,66 +159,69 @@ export default function PromptInput() {
             }}
           />
 
-          {/* ── + Button ──────────────────────────────────────────────── */}
-          <motion.button
-            type="button"
-            className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-colors duration-300"
-            style={{
-              backgroundColor: plusBtnBg,
-              borderColor: isCritical
-                ? "rgba(255,0,64,0.25)"
-                : "rgba(255,255,255,0.10)",
-            }}
-            variants={btnPulseVariants}
-            animate={isCritical ? "critical" : "idle"}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
-            aria-label="Ajouter un fichier"
-          >
-            <PlusIcon color={plusIconColor} />
-          </motion.button>
+          {/* ── Bottom row: + button, Send button ────────────────────── */}
+          <div className="relative z-10 flex items-center gap-3">
+            {/* ── + Button ──────────────────────────────────────────────── */}
+            <motion.button
+              type="button"
+              className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-colors duration-300"
+              style={{
+                backgroundColor: plusBtnBg,
+                borderColor: isCritical
+                  ? "rgba(255,0,64,0.25)"
+                  : "rgba(255,255,255,0.10)",
+              }}
+              variants={btnPulseVariants}
+              animate={isCritical ? "critical" : "idle"}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              aria-label="Ajouter un fichier"
+            >
+              <PlusIcon color={plusIconColor} />
+            </motion.button>
 
-          {/* ── Text Input ────────────────────────────────────────────── */}
-          <textarea
-            ref={textareaRef}
-            value={promptText}
-            onChange={handleTextareaChange}
-            maxLength={maxChars}
-            rows={2}
-            placeholder="Commence à taper... le système respire encore."
-            spellCheck={false}
-            autoFocus
-            autoComplete="off"
-            className={`
+            {/* ── Text Input ────────────────────────────────────────────── */}
+            <textarea
+              ref={textareaRef}
+              value={promptText}
+              onChange={handleTextareaChange}
+              maxLength={maxChars}
+              rows={4}
+              placeholder="Commence à taper... le système respire encore."
+              spellCheck={false}
+              autoFocus
+              autoComplete="off"
+              className={`
               relative z-10 flex-1 min-w-0 resize-none
               bg-transparent px-3 py-2 text-lg font-medium leading-relaxed
               tracking-wide outline-none hide-scrollbar
               ${placeholderOpacity}
             `}
-            style={{
-              color: textColor,
-              filter: isCritical ? "blur(0.5px)" : "none",
-              textShadow: isCritical
-                ? "0 0 8px rgba(255,0,64,0.45)"
-                : "none",
-              transition:
-                "color 0.3s ease, filter 0.3s ease, text-shadow 0.3s ease",
-            }}
-          />
+              style={{
+                color: textColor,
+                filter: isCritical ? "blur(0.5px)" : "none",
+                textShadow: isCritical
+                  ? "0 0 8px rgba(255,0,64,0.45)"
+                  : "none",
+                transition:
+                  "color 0.3s ease, filter 0.3s ease, text-shadow 0.3s ease",
+              }}
+            />
 
-          {/* ── Send Button ───────────────────────────────────────────── */}
-          <motion.button
-            type="button"
-            className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
-            style={{ backgroundColor: sendBtnBg }}
-            variants={btnPulseVariants}
-            animate={isCritical ? "critical" : "idle"}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
-            aria-label="Envoyer"
-          >
-            <ArrowUpIcon color={sendIconColor} />
-          </motion.button>
+            {/* ── Send Button ───────────────────────────────────────────── */}
+            <motion.button
+              type="button"
+              className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
+              style={{ backgroundColor: sendBtnBg }}
+              variants={btnPulseVariants}
+              animate={isCritical ? "critical" : "idle"}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              aria-label="Envoyer"
+            >
+              <ArrowUpIcon color={sendIconColor} />
+            </motion.button>
+          </div>
         </div>
 
         {/* ── HUD Below: Integrity + Tokens + Écho ──────────────────────── */}
