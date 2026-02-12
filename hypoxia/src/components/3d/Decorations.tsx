@@ -3,6 +3,7 @@ import { useStore } from "@/store/useStore";
 import { useRef, useMemo, useLayoutEffect } from "react";
 import * as THREE from "three";
 import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
+import seededRandom from "@/utils/seededRandom";
 
 const tempObject = new THREE.Object3D();
 
@@ -15,13 +16,16 @@ export default function Decorations() {
     const GRASS_COUNT = 5000; // Lush vegetation
 
     const { rocks, ferns } = useMemo(() => {
+        // Reset seed
+        seededRandom.reset(24680);
+
         const _rocks = [];
         const _ferns = [];
 
         // Rocks: IN the river bed + along banks
         for (let i = 0; i < ROCK_COUNT; i++) {
-            const x = (Math.random() - 0.5) * 90;
-            const z = (Math.random() - 0.5) * 90;
+            const x = (seededRandom.next() - 0.5) * 90;
+            const z = (seededRandom.next() - 0.5) * 90;
 
             let minDist = 1000;
             for (let j = 0; j <= 20; j++) {
@@ -33,15 +37,15 @@ export default function Decorations() {
             // River Bed (0.5-3) + Banks (3-9)
             if (minDist > 0.5 && minDist < 9) {
                 const y = getTerrainHeight(x, z);
-                const scale = minDist < 3 ? 0.3 + Math.random() * 0.5 : 0.2 + Math.random() * 0.6;
+                const scale = minDist < 3 ? 0.3 + seededRandom.next() * 0.5 : 0.2 + seededRandom.next() * 0.6;
                 _rocks.push({ x, y, z, scale });
             }
         }
 
         // Ferns/Grass: Dense, especially on banks
         for (let i = 0; i < GRASS_COUNT; i++) {
-            const x = (Math.random() - 0.5) * 95;
-            const z = (Math.random() - 0.5) * 95;
+            const x = (seededRandom.next() - 0.5) * 95;
+            const z = (seededRandom.next() - 0.5) * 95;
 
             let minDist = 1000;
             for (let j = 0; j <= 10; j++) {
@@ -53,7 +57,7 @@ export default function Decorations() {
             // Grass everywhere implies lush season
             if (minDist > 3.5) { // Not inside water (starting from bank edge)
                 const y = getTerrainHeight(x, z);
-                const scale = 0.5 + Math.random() * 0.8; // Larger for ferns
+                const scale = 0.5 + seededRandom.next() * 0.8; // Larger for ferns
                 _ferns.push({ x, y, z, scale });
             }
         }
@@ -63,10 +67,13 @@ export default function Decorations() {
 
     useLayoutEffect(() => {
         if (rockMesh.current) {
+            // Reset seed for consistency (although not strictly needed if inputs are static)
+            seededRandom.reset(11223);
+
             rocks.forEach((rock, i) => {
                 tempObject.position.set(rock.x, rock.y + (0.3 * rock.scale), rock.z);
                 tempObject.scale.set(rock.scale, rock.scale, rock.scale);
-                tempObject.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                tempObject.rotation.set(seededRandom.next() * Math.PI, seededRandom.next() * Math.PI, seededRandom.next() * Math.PI);
                 tempObject.updateMatrix();
                 rockMesh.current!.setMatrixAt(i, tempObject.matrix);
             });
@@ -74,10 +81,12 @@ export default function Decorations() {
         }
 
         if (grassMesh.current) {
+            seededRandom.reset(33445);
+
             ferns.forEach((fern, i) => {
                 tempObject.position.set(fern.x, fern.y, fern.z);
                 tempObject.scale.set(fern.scale, fern.scale * 1.5, fern.scale); // Tall ferns
-                tempObject.rotation.set(0, Math.random() * Math.PI, 0);
+                tempObject.rotation.set(0, seededRandom.next() * Math.PI, 0);
                 tempObject.updateMatrix();
                 grassMesh.current!.setMatrixAt(i, tempObject.matrix);
             });
@@ -90,10 +99,15 @@ export default function Decorations() {
 
     return (
         <group>
-            {/* ROCKS (Grey River Stones) */}
+            {/* ROCKS (Grey River Stones) - Photorealistic */}
             <instancedMesh ref={rockMesh} args={[undefined, undefined, rocks.length]}>
-                <dodecahedronGeometry args={[1, 0]} />
-                <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0.1} />
+                <icosahedronGeometry args={[1, 1]} />
+                <meshStandardMaterial
+                    color="#6b7280"
+                    roughness={0.85}
+                    metalness={0.15}
+                    envMapIntensity={0.4}
+                />
             </instancedMesh>
 
             {/* FERNS (using Cone for stylized look) */}

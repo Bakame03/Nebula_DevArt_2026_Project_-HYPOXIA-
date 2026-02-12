@@ -17,10 +17,10 @@ export default function River() {
 
   useFrame((state) => {
     if (meshRef.current) {
-      const waterHeight = 1.0 * (1 - stressLevel * 0.9);
+      const waterHeight = 4.0 * (1 - stressLevel * 1);
 
-      meshRef.current.scale.y = 0.05 * (1 - stressLevel * 0.8);
-      meshRef.current.position.y = -1.8 + (waterHeight * 0.5);
+      meshRef.current.scale.y = 0.35 * (1 - stressLevel * 1);
+      meshRef.current.position.y = -4.2 + (waterHeight * 1);
     }
   });
 
@@ -32,13 +32,17 @@ export default function River() {
 
   return (
     <mesh ref={meshRef} geometry={geometry} rotation={[0, 0, 0]}>
-      <meshStandardMaterial
+      <meshPhysicalMaterial
         color={color}
         roughness={roughness}
         metalness={metalness}
+        transmission={0.9 - (stressLevel * 0.8)} // Glass-like transparency
+        thickness={0.5}
+        ior={1.33} // Water refraction index
+        envMapIntensity={1.5}
         side={THREE.DoubleSide}
         transparent={true}
-        opacity={0.6}
+        opacity={0.8}
       />
     </mesh>
   );

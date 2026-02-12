@@ -3,6 +3,7 @@ import { useStore } from "@/store/useStore";
 import { useMemo, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { riverCurve, getTerrainHeight } from "@/utils/terrainLogic";
+import seededRandom from "@/utils/seededRandom";
 
 export default function Terrain() {
     const { stressLevel } = useStore();
@@ -10,8 +11,11 @@ export default function Terrain() {
 
     // Géométrie du terrain (Haute résolution pour les détails)
     const geometry = useMemo(() => {
-        // Plane de 100x100 avec beaucoup de segments
-        const geo = new THREE.PlaneGeometry(100, 100, 128, 128);
+        // Reset seed for consistency on re-renders if needed (though useMemo holds it)
+        seededRandom.reset(12345);
+
+        // Plane de 100x100 avec haute résolution pour détails photoréalistes
+        const geo = new THREE.PlaneGeometry(100, 100, 256, 256);
         geo.rotateX(-Math.PI / 2);
 
         const posAttribute = geo.attributes.position;
@@ -36,10 +40,10 @@ export default function Terrain() {
                 color.set("#b45309").lerp(new THREE.Color("#d97706"), t); // Dark to Light Ochre
             } else {
                 // Forest Floor (Tender Greens)
-                const baseGreen = Math.random() > 0.5 ? "#86efac" : "#4ade80"; // Soft greens
+                const baseGreen = seededRandom.next() > 0.5 ? "#86efac" : "#4ade80"; // Soft greens
                 color.set(baseGreen);
                 // Subtle variation
-                const noise = (Math.random() - 0.5) * 0.15;
+                const noise = (seededRandom.next() - 0.5) * 0.15;
                 color.offsetHSL(0, noise * 0.2, noise);
             }
             colors.push(color.r, color.g, color.b);
@@ -55,9 +59,10 @@ export default function Terrain() {
         <mesh ref={meshRef} geometry={geometry} receiveShadow>
             <meshStandardMaterial
                 vertexColors
-                roughness={0.9}
-                metalness={0.1}
-                flatShading={true}
+                roughness={0.95}
+                metalness={0.05}
+                flatShading={false}
+                envMapIntensity={0.3}
             />
         </mesh>
     );
