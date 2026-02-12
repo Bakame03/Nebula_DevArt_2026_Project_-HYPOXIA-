@@ -6,12 +6,12 @@ import { useStore } from '@/store/useStore';
 // ============================================================
 // 🫁 SoundManager — L'Angoisse Sonore d'HYPOXIA
 // ============================================================
-// 5 couches sonores : FLEUVE + OISEAUX → SUFFOCATION + CŒUR + DRONE
+// 4 couches sonores : FLEUVE + OISEAUX → CŒUR + DRONE
 //
-// Stress 0.0-0.2 : 🌊🐦 Fleuve vivant + oiseaux chantent
-// Stress 0.2-0.5 : 🟡 Fleuve/oiseaux s'atténuent, suffoquement apparaît
-// Stress 0.5-0.8 : 🔴 Fleuve étouffé, oiseaux meurent, cœur s'emballe
-// Stress 0.8-1.0 : 💀 Silence mortel, suffoquement lourd, tachycardie
+// Stress 0.0-0.1 : 🌊🐦 Fleuve vivant + oiseaux chantent
+// Stress 0.1-0.4 : 🟡 Cœur apparaît doucement, fleuve/oiseaux s'atténuent
+// Stress 0.4-0.7 : 🔴 Fleuve étouffé, oiseaux meurent, cœur s'emballe
+// Stress 0.7-1.0 : 💀 Silence mortel, tachycardie extrême
 // ============================================================
 
 /** Interpolation douce entre deux valeurs */
@@ -30,7 +30,6 @@ export default function SoundManager() {
   // ─── Refs pour les instances Howl ─────────────────────────
   const riverRef = useRef<Howl | null>(null);      // 🌊 Fleuve
   const birdsRef = useRef<Howl | null>(null);      // 🐦 Oiseaux
-  const breathRef = useRef<Howl | null>(null);     // 🫁 Suffoquement grave
   const heartRef = useRef<Howl | null>(null);      // 💓 Battement de cœur
 
   // ─── Refs pour le filtre passe-bas sur le fleuve ──────────
@@ -48,8 +47,6 @@ export default function SoundManager() {
   const currentRiverVol = useRef(0.7);       // Fleuve fort
   const currentRiverFilter = useRef(2200);   // Filtre ouvert (Hz)
   const currentBirdsVol = useRef(0.5);       // Oiseaux audibles
-  const currentBreathVol = useRef(0.0);      // Suffoquement muet
-  const currentBreathRate = useRef(0.6);     // Rate grave
   const currentHeartVol = useRef(0.0);       // Cœur muet
   const currentHeartRate = useRef(0.6);      // Rate lent
 
@@ -105,11 +102,7 @@ export default function SoundManager() {
       birdsRef.current.play();
     }
 
-    // 🫁 Lancer le suffoquement (muet, prêt à monter)
-    if (breathRef.current) {
-      breathRef.current.volume(0);
-      breathRef.current.play();
-    }
+
 
     // 💓 Lancer le cœur (muet, prêt à monter)
     if (heartRef.current) {
@@ -181,44 +174,36 @@ export default function SoundManager() {
       }
 
       // ════════════════════════════════════════════════════════
-      // 🐦 COUCHE 2 : OISEAUX (disparaissent comme le fleuve)
+      // 🐦 COUCHE 2 : OISEAUX (disparaissent TOTALEMENT avec le stress)
       // ════════════════════════════════════════════════════════
-      // Volume : 0.5 → 0.0 (meurent avec l'écosystème)
-      // Rate : 1.0 → 0.6 (ralentissent, comme s'ils s'éteignent)
-      const birdsVolTarget = clamp(0.5 * (1 - stress * 1.4), 0, 0.5);
+      // Volume : 0.5 → 0.0 très vite (dès 40% de stress, silence total)
+      // Rate : 1.0 → 0.6
+      let birdsVolTarget = clamp(0.5 * (1 - stress * 2.5), 0, 0.5); // Coupe plus vite !
+      if (stress > 0.4) birdsVolTarget = 0; // Sécurité absolue : silence total après 40%
 
       currentBirdsVol.current = lerp(currentBirdsVol.current, birdsVolTarget, lerpSpeed);
 
       if (birdsRef.current) {
         birdsRef.current.volume(currentBirdsVol.current);
-        birdsRef.current.rate(clamp(1.0 - stress * 0.4, 0.6, 1.0));
+        // Si volume quasi nul, on mute/pause pour éviter tout glitch
+        if (currentBirdsVol.current < 0.01) {
+          birdsRef.current.mute(true);
+        } else {
+          birdsRef.current.mute(false);
+          birdsRef.current.rate(clamp(1.0 - stress * 0.4, 0.6, 1.0));
+        }
       }
 
-      // ════════════════════════════════════════════════════════
-      // 🫁 COUCHE 3 : SUFFOQUEMENT GRAVE (apparaît dès 10%)
-      // ════════════════════════════════════════════════════════
-      // Rate : 0.55 (très grave) → 0.35 (agonisant)
-      // Volume : montée cubique puis max à 1.0 — TRÈS présent
-      const breathStress = clamp((stress - 0.1) / 0.9, 0, 1);
-      const breathVolTarget = breathStress * breathStress * breathStress * 1.0;
-      const breathRateTarget = 0.55 - (breathStress * 0.2); // 0.55 → 0.35
 
-      currentBreathVol.current = lerp(currentBreathVol.current, breathVolTarget, lerpSpeed);
-      currentBreathRate.current = lerp(currentBreathRate.current, breathRateTarget, lerpSpeed);
-
-      if (breathRef.current) {
-        breathRef.current.volume(currentBreathVol.current);
-        breathRef.current.rate(currentBreathRate.current);
-      }
 
       // ════════════════════════════════════════════════════════
-      // 💓 COUCHE 4 : BATTEMENT DE CŒUR (apparaît dès 20%)
+      // 💓 COUCHE 4 : BATTEMENT DE CŒUR (apparaît dès 10%)
       // ════════════════════════════════════════════════════════
-      // Rate : 0.5 (très lent) → 2.8 (tachycardie extrême)
-      // Volume max : 1.0 — TRÈS présent et oppressant
-      const heartStress = clamp((stress - 0.2) / 0.8, 0, 1);
-      const heartVolTarget = heartStress * heartStress * heartStress * 1.0;
-      const heartRateTarget = 0.5 + heartStress * heartStress * 2.3; // 0.5 → 2.8
+      // Rate : 0.6 (lent) → 3.2 (tachycardie extrême et terrifiante)
+      // Volume : montée quadratique — TRÈS présent et oppressant
+      const heartStress = clamp((stress - 0.1) / 0.9, 0, 1);
+      const heartVolTarget = heartStress * heartStress * 1.0;
+      const heartRateTarget = 0.6 + heartStress * heartStress * 2.6; // 0.6 → 3.2
 
       currentHeartVol.current = lerp(currentHeartVol.current, heartVolTarget, lerpSpeed);
       currentHeartRate.current = lerp(currentHeartRate.current, heartRateTarget, lerpSpeed);
@@ -249,6 +234,9 @@ export default function SoundManager() {
         lfoGainRef.current.gain.value = droneStress * 0.1;
       }
 
+      // DEBUG Logs (temporaire pour vérifier)
+      // console.log(`Stress: ${stress.toFixed(2)} | BirdsVol: ${currentBirdsVol.current.toFixed(2)} | HeartVol: ${currentHeartVol.current.toFixed(2)}`);
+
       rafRef.current = requestAnimationFrame(update);
     };
 
@@ -277,22 +265,14 @@ export default function SoundManager() {
       preload: true,
     });
 
-    // 🫁 Suffoquement grave
-    breathRef.current = new Howl({
-      src: ['/sounds/breathing.mp3'],
-      loop: true,
-      volume: 0,
-      rate: 0.55,
-      html5: true,
-      preload: true,
-    });
 
-    // 💓 Battement de cœur — très présent
+
+    // 💓 Battement de cœur — intense et oppressant
     heartRef.current = new Howl({
       src: ['/sounds/heartbeat.mp3'],
       loop: true,
       volume: 0,
-      rate: 0.5,
+      rate: 0.6,
       html5: true,
       preload: true,
     });
@@ -321,7 +301,6 @@ export default function SoundManager() {
 
       riverRef.current?.unload();
       birdsRef.current?.unload();
-      breathRef.current?.unload();
       heartRef.current?.unload();
 
       try {
