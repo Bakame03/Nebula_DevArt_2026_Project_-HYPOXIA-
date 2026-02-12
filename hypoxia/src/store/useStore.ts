@@ -1,95 +1,71 @@
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { create } from "zustand";
 
-// Constante globale (interne ou exportée selon besoin)
+// ─── Constants ───────────────────────────────────────────────────────────────
 const MAX_CHARS = 200;
+const CRITICAL_THRESHOLD = 0.75;
+const DAMAGE_INCREMENT = 0.002;
+const MAX_PERMANENT_DAMAGE = 0.5;
 
+// ─── Types ───────────────────────────────────────────────────────────────────
 interface HypoxiaState {
-  // État
+  /** Current prompt text entered by the user */
   promptText: string;
-  stressLevel: number; // Surcharge immédiate (0 à 1)
-  permanentDamage: number; // Cicatrice écologique (0 à 0.5)
 
-  // Actions
+  /**
+   * Effective stress level visible to components.
+   * = clamp(rawStress + permanentDamage, 0, 1)
+   */
+  stressLevel: number;
+
+  /**
+   * Ecological scar — "L'Écho".
+   * Accumulates irreversibly when the system enters the critical zone.
+   * Capped at MAX_PERMANENT_DAMAGE (0.5).
+   */
+  permanentDamage: number;
+
+  /** Hard character limit before system "death". */
+  maxChars: number;
+
+  // ── Actions ──────────────────────────────────────────────────────────────
   setPrompt: (text: string) => void;
   reset: () => void;
 }
 
-// Sélecteurs utiles pour l'UI
-// Note: Le "stress visible" est une valeur dérivée.
-export const selectVisibleStress = (state: HypoxiaState) =>
-  Math.min(state.stressLevel + state.permanentDamage, 1);
+// ─── Initial values ──────────────────────────────────────────────────────────
+const initialState = {
+  promptText: "",
+  stressLevel: 0,
+  permanentDamage: 0,
+  maxChars: MAX_CHARS,
+} as const;
 
-export const selectCharactersRemaining = (state: HypoxiaState) =>
-  Math.max(MAX_CHARS - state.promptText.length, 0);
+// ─── Store ───────────────────────────────────────────────────────────────────
+export const useStore = create<HypoxiaState>()((set, get) => ({
+  ...initialState,
 
-export const useStore = create<HypoxiaState>()(
-  devtools(
-    (set, get) => ({
-      promptText: '',
-      stressLevel: 0,
-      permanentDamage: 0,
+  setPrompt: (text: string) => {
+    const { permanentDamage: prevDamage } = get();
 
-      setPrompt: (text: string) => {
-        const { promptText, permanentDamage } = get();
+    // 1. Raw stress based purely on character count
+    const rawStress = Math.min(text.length / MAX_CHARS, 1);
 
-        // 1. Calcul de la surcharge immédiate
-        // On s'assure que le texte ne dépasse pas physiquement la limite si nécessaire, 
-        // ou on laisse l'utilisateur déborder (le stress sera > 1 ? Non, borné par la logique).
-        // La spec dit maxChars est la limite avant la "mort".
-        // Nous allons permettre la saisie mais calculer le stress.
+    // 2. "L'Écho" — accumulate permanent damage while in the critical zone
+    let nextDamage = prevDamage;
+    if (rawStress > CRITICAL_THRESHOLD) {
+      nextDamage = Math.min(prevDamage + DAMAGE_INCREMENT, MAX_PERMANENT_DAMAGE);
+    }
 
-        const newLength = text.length;
-        const rawStress = newLength / MAX_CHARS;
-        
-        // La spec ne dit pas de bloquer la saisie à 200, mais c'est une "limite". 
-        // On va assumer que le stress continue de monter ou cap à 1 pour l'immédiat.
-        // Spec: "stressLevel (number, 0 à 1)" -> bornons le stress calculé à 1 pour l'état ?
-        // Ou laissons-le brut ? "Représente la surcharge immédiate".
-        // S'il tape 201 caractères, stress = 1.005. 
-        // Je vais borner le stress immédiat calculé à 1 pour respecter le type (0 à 1).
-        // Mais pour la mécanique de l'écho, le dépassement est critique.
+    // 3. Effective stress: raw + scar, clamped to [0, 1]
+    const effectiveStress = Math.min(rawStress + nextDamage, 1);
 
-        const nextStressLevel = rawStress;
-        // On ne clamp pas tout de suite si on veut détecter la zone critique précise, 
-        // mais pour l'état stocké, respectons 0-1.
-        
-        const clampedStressLevel = Math.min(rawStress, 1);
+    set({
+      promptText: text,
+      stressLevel: effectiveStress,
+      permanentDamage: nextDamage,
+    });
+  },
 
-        // 2. Mécanique de l'Écho (Permanent Damage)
-        // Si on est en Zone Critique (> 0.75) ET qu'on ajoute du texte.
-        let nextPermanentDamage = permanentDamage;
-
-        // Détection d'ajout de contenu (frappe)
-        const isAddingContent = newLength > promptText.length;
-        
-        if (nextStressLevel > 0.75 && isAddingContent) {
-          // Calcul du delta pour gérer le collage de texte ou la frappe rapide
-          const delta = newLength - promptText.length;
-          
-          // +0.002 par caractère ajouté dans la zone rouge
-          const damageIncrement = 0.002 * delta;
-          
-          nextPermanentDamage = Math.min(permanentDamage + damageIncrement, 0.5);
-        }
-
-        set({
-          promptText: text,
-          stressLevel: clampedStressLevel,
-          permanentDamage: nextPermanentDamage,
-        });
-      },
-
-      reset: () => {
-        set({
-          promptText: '',
-          stressLevel: 0,
-          // Note: permanentDamage est... permanent ? 
-          // Pour un reset de jeu complet, on remet tout à 0.
-          permanentDamage: 0, 
-        });
-      },
-    }),
-    { name: 'HypoxiaStore' }
-  )
-);
+  /** Full reset — wipes text, stress, AND permanent damage. */
+  reset: () => set({ ...initialState }),
+}));

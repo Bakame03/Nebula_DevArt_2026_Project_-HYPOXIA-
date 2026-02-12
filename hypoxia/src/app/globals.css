@@ -6,8 +6,19 @@ html,
 body {
   height: 100%;
   width: 100%;
-  background-color: black;
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
   color: white;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   overflow: hidden;
-  /* Empêche le scroll */
+}
+
+/* Utility class: semi-transparent glass panel */
+.glass-panel {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* Safari support */
 }
