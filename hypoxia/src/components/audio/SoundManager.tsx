@@ -174,17 +174,24 @@ export default function SoundManager() {
       }
 
       // ════════════════════════════════════════════════════════
-      // 🐦 COUCHE 2 : OISEAUX (disparaissent comme le fleuve)
+      // 🐦 COUCHE 2 : OISEAUX (disparaissent TOTALEMENT avec le stress)
       // ════════════════════════════════════════════════════════
-      // Volume : 0.5 → 0.0 (meurent avec l'écosystème)
-      // Rate : 1.0 → 0.6 (ralentissent, comme s'ils s'éteignent)
-      const birdsVolTarget = clamp(0.5 * (1 - stress * 1.4), 0, 0.5);
+      // Volume : 0.5 → 0.0 très vite (dès 40% de stress, silence total)
+      // Rate : 1.0 → 0.6
+      let birdsVolTarget = clamp(0.5 * (1 - stress * 2.5), 0, 0.5); // Coupe plus vite !
+      if (stress > 0.4) birdsVolTarget = 0; // Sécurité absolue : silence total après 40%
 
       currentBirdsVol.current = lerp(currentBirdsVol.current, birdsVolTarget, lerpSpeed);
 
       if (birdsRef.current) {
         birdsRef.current.volume(currentBirdsVol.current);
-        birdsRef.current.rate(clamp(1.0 - stress * 0.4, 0.6, 1.0));
+        // Si volume quasi nul, on mute/pause pour éviter tout glitch
+        if (currentBirdsVol.current < 0.01) {
+          birdsRef.current.mute(true);
+        } else {
+          birdsRef.current.mute(false);
+          birdsRef.current.rate(clamp(1.0 - stress * 0.4, 0.6, 1.0));
+        }
       }
 
 
@@ -226,6 +233,9 @@ export default function SoundManager() {
         lfoRef.current.frequency.value = 0.3 + droneStress * 6;
         lfoGainRef.current.gain.value = droneStress * 0.1;
       }
+
+      // DEBUG Logs (temporaire pour vérifier)
+      // console.log(`Stress: ${stress.toFixed(2)} | BirdsVol: ${currentBirdsVol.current.toFixed(2)} | HeartVol: ${currentHeartVol.current.toFixed(2)}`);
 
       rafRef.current = requestAnimationFrame(update);
     };
