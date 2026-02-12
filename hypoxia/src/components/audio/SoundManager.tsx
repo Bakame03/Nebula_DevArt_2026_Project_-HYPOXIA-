@@ -234,6 +234,6 @@ export default function SoundManager() {
     };
   }, [initAudio]);
 
-  // Composant invisible — pas de rendu visue
+  // Composant invisible — pas de rendu visuel
   return null;
 }
