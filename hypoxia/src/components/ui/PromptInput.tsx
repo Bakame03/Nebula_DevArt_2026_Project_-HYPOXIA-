@@ -10,10 +10,23 @@ import { useStore } from "@/store/useStore";
 const shakeVariants: Variants = {
   idle: { x: 0, rotate: 0 },
   shake: {
-    x: [0, -3, 5, -5, 4, -2, 2, 0],
-    rotate: [0, -0.3, 0.3, -0.2, 0.2, 0],
+    x: [0, -3, 5, -6, 4, -2, 3, 0],
+    rotate: [0, -0.2, 0.3, -0.15, 0.2, 0],
     transition: {
-      duration: 0.35,
+      duration: 0.3,
+      repeat: Infinity,
+      repeatType: "mirror" as const,
+    },
+  },
+};
+
+const glitchVariants: Variants = {
+  idle: { scale: 1, opacity: 1 },
+  glitch: {
+    scale: [1, 1.15, 0.9, 1.05, 1],
+    opacity: [1, 0.4, 1, 0.6, 1],
+    transition: {
+      duration: 0.4,
       repeat: Infinity,
       repeatType: "mirror" as const,
     },
@@ -30,21 +43,9 @@ const alertVariants: Variants = {
   },
   exit: {
     opacity: 0,
-    scale: 0.8,
-    filter: "blur(16px)",
+    scale: 0.85,
+    filter: "blur(14px)",
     transition: { duration: 0.25 },
-  },
-};
-
-const pulseVariants: Variants = {
-  idle: { opacity: 1 },
-  critical: {
-    opacity: [1, 0.3, 1],
-    transition: {
-      duration: 0.6,
-      repeat: Infinity,
-      ease: "easeInOut" as const,
-    },
   },
 };
 
@@ -52,22 +53,51 @@ const pulseVariants: Variants = {
 
 function getBarColor(corruption: number): string {
   if (corruption > 0.9) return "#ff0040";
-  if (corruption > 0.6) return "#ff8c00";
-  if (corruption > 0.3) return "#ffcc00";
+  if (corruption > 0.7) return "#ff4040";
+  if (corruption > 0.4) return "#ffcc00";
   return "#00ffaa";
 }
 
 function getIntegrityTag(corruption: number): string {
   if (corruption > 0.9) return "MELTDOWN";
-  if (corruption > 0.6) return "DEGRADED";
-  if (corruption > 0.3) return "UNSTABLE";
+  if (corruption > 0.7) return "CRITICAL";
+  if (corruption > 0.4) return "UNSTABLE";
   return "NOMINAL";
+}
+
+// ─── Icons ───────────────────────────────────────────────────────────────────
+
+function PlusIcon({ color }: { color: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path
+        d="M10 4v12M4 10h12"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ArrowUpIcon({ color }: { color: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path
+        d="M10 16V4m0 0l-5 5m5-5l5 5"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PromptInput() {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const promptText = useStore((s) => s.promptText);
   const stressLevel = useStore((s) => s.stressLevel);
@@ -75,7 +105,6 @@ export default function PromptInput() {
   const maxChars = useStore((s) => s.maxChars);
   const setPrompt = useStore((s) => s.setPrompt);
 
-  // Corruption = sum of immediate stress + permanent scar, capped at 1
   const corruption = useMemo(
     () => Math.min(stressLevel + permanentDamage, 1),
     [stressLevel, permanentDamage],
@@ -84,12 +113,11 @@ export default function PromptInput() {
   const integrity = Math.max(1 - corruption, 0);
   const charCount = promptText.length;
   const barColor = getBarColor(corruption);
-  const isCritical = corruption > 0.8;
+  const isCritical = corruption > 0.7;
   const isMeltdown = corruption > 0.9;
-  const isOxygenDepleted = corruption > 0.95;
 
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.value.length <= maxChars) {
         setPrompt(e.target.value);
       }
@@ -97,152 +125,206 @@ export default function PromptInput() {
     [maxChars, setPrompt],
   );
 
+  // Dynamic styles based on corruption
+  const borderColor = isCritical
+    ? `rgba(255, 0, 64, ${0.3 + corruption * 0.4})`
+    : "rgba(255, 255, 255, 0.20)";
+
+  const boxShadow = isCritical
+    ? `0 0 60px rgba(255,0,64,${corruption * 0.2}), 0 0 120px rgba(255,0,64,${corruption * 0.08}), inset 0 0 30px rgba(255,0,64,0.03)`
+    : "0 0 40px rgba(0,0,0,0.3)";
+
+  const btnColor = isCritical ? "#ff0040" : "rgba(255,255,255,0.5)";
+  const btnBg = isCritical
+    ? "rgba(255,0,64,0.12)"
+    : "rgba(255,255,255,0.08)";
+
   return (
     <>
-      {/* ── Ambient vignette that intensifies with corruption ──────────── */}
-      <motion.div
-        className="pointer-events-none fixed inset-0 z-40"
-        animate={{
-          background: isMeltdown
-            ? "radial-gradient(ellipse at bottom center, rgba(255,0,64,0.12) 0%, transparent 70%)"
-            : "radial-gradient(ellipse at bottom center, transparent 0%, transparent 100%)",
-        }}
-        transition={{ duration: 0.8 }}
-      />
+      {/* ── Full-screen overlay — pointer-events: none ─────────────────── */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
 
-      {/* ── Floating Chat Bar ─────────────────────────────────────────── */}
-      <motion.div
-        className="fixed bottom-6 left-1/2 z-50 w-[92%] max-w-3xl -translate-x-1/2"
-        variants={shakeVariants}
-        animate={isCritical ? "shake" : "idle"}
-      >
-        {/* ── SYSTEM INTEGRITY bar (above the input) ───────────────────── */}
-        <div className="mb-2 px-1">
-          <div className="flex items-center justify-between">
-            <span
-              className="text-[9px] font-bold uppercase tracking-[0.25em]"
-              style={{ color: barColor }}
-            >
-              System Integrity
-            </span>
-            <motion.span
-              className="font-mono text-[9px] font-bold uppercase tracking-wider"
-              style={{ color: barColor }}
-              variants={pulseVariants}
-              animate={isMeltdown ? "critical" : "idle"}
-            >
-              {getIntegrityTag(corruption)}
-            </motion.span>
-          </div>
-
-          {/* Progress track */}
-          <div className="mt-1 h-[2px] w-full overflow-hidden rounded-full bg-white/[0.06]">
+        {/* ── Ambient red glow when critical ──────────────────────────── */}
+        <AnimatePresence>
+          {isCritical && (
             <motion.div
-              className="h-full rounded-full"
-              style={{ backgroundColor: barColor }}
-              animate={{
-                width: `${integrity * 100}%`,
-                boxShadow: isMeltdown
-                  ? `0 0 12px ${barColor}, 0 0 24px ${barColor}40`
-                  : `0 0 6px ${barColor}60`,
+              key="ambient-glow"
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, rgba(255,0,64,0.06) 0%, transparent 70%)",
               }}
-              transition={{ type: "spring", stiffness: 100, damping: 18 }}
             />
-          </div>
-        </div>
+          )}
+        </AnimatePresence>
 
-        {/* ── Glass Input Container ────────────────────────────────────── */}
-        <div
-          className="relative overflow-hidden rounded-2xl border backdrop-blur-xl"
-          style={{
-            background: "rgba(0, 0, 0, 0.30)",
-            borderColor: isMeltdown
-              ? "rgba(255, 0, 64, 0.25)"
-              : "rgba(255, 255, 255, 0.10)",
-            boxShadow: isMeltdown
-              ? "0 0 40px rgba(255,0,64,0.08), inset 0 0 30px rgba(255,0,64,0.03)"
-              : "0 8px 32px rgba(0,0,0,0.4)",
-            transition: "border-color 0.4s ease, box-shadow 0.5s ease",
-          }}
+        {/* ── Centered Capsule Bar — pointer-events: auto ─────────────── */}
+        <motion.div
+          className="pointer-events-auto w-[92%] max-w-2xl flex flex-col items-center"
+          variants={shakeVariants}
+          animate={isCritical ? "shake" : "idle"}
         >
-          {/* Scanline noise overlay */}
-          <div
-            className="pointer-events-none absolute inset-0 z-10 opacity-[0.025]"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.04) 2px, rgba(255,255,255,0.04) 4px)",
-            }}
-          />
+          {/* ── SYSTEM INTEGRITY bar ──────────────────────────────────── */}
+          <div className="w-full max-w-md mb-3 px-4">
+            <div className="flex items-center justify-between mb-1">
+              <span
+                className="text-[9px] font-bold uppercase tracking-[0.25em]"
+                style={{ color: barColor }}
+              >
+                System Integrity
+              </span>
+              <motion.span
+                className="font-mono text-[9px] font-bold uppercase tracking-wider"
+                style={{ color: barColor }}
+                animate={
+                  isMeltdown
+                    ? { opacity: [1, 0.3, 1] }
+                    : { opacity: 1 }
+                }
+                transition={
+                  isMeltdown
+                    ? { duration: 0.5, repeat: Infinity, ease: "easeInOut" as const }
+                    : {}
+                }
+              >
+                {getIntegrityTag(corruption)}
+              </motion.span>
+            </div>
+            <div className="h-[2px] w-full overflow-hidden rounded-full bg-white/[0.06]">
+              <motion.div
+                className="h-full rounded-full"
+                style={{
+                  backgroundColor: barColor,
+                  boxShadow: `0 0 8px ${barColor}80`,
+                }}
+                animate={{ width: `${integrity * 100}%` }}
+                transition={{ type: "spring", stiffness: 100, damping: 18 }}
+              />
+            </div>
+          </div>
 
-          {/* Inner layout: textarea + meta row */}
-          <div className="relative z-20 flex flex-col gap-2 p-4">
-            <textarea
-              ref={textareaRef}
+          {/* ── Liquid Glass Capsule ──────────────────────────────────── */}
+          <div
+            className="relative flex w-full items-center gap-2 rounded-full border px-2 py-2"
+            style={{
+              background: isCritical
+                ? "rgba(255, 0, 64, 0.05)"
+                : "rgba(255, 255, 255, 0.10)",
+              backdropFilter: "blur(40px)",
+              WebkitBackdropFilter: "blur(40px)",
+              borderColor,
+              boxShadow,
+              transition:
+                "background 0.5s ease, border-color 0.4s ease, box-shadow 0.5s ease",
+            }}
+          >
+            {/* ── + Button ────────────────────────────────────────────── */}
+            <motion.button
+              type="button"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-colors"
+              style={{
+                borderColor: isCritical
+                  ? "rgba(255,0,64,0.3)"
+                  : "rgba(255,255,255,0.12)",
+                backgroundColor: btnBg,
+              }}
+              variants={glitchVariants}
+              animate={isMeltdown ? "glitch" : "idle"}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              aria-label="Ajouter un fichier"
+            >
+              <PlusIcon color={btnColor} />
+            </motion.button>
+
+            {/* ── Text Input ──────────────────────────────────────────── */}
+            <input
+              ref={inputRef}
+              type="text"
               value={promptText}
               onChange={handleChange}
               maxLength={maxChars}
-              rows={2}
-              placeholder="Commence à taper... le système respire encore."
+              placeholder="Tape ici... le système respire encore."
               spellCheck={false}
               autoFocus
-              className="w-full resize-none bg-transparent text-base font-medium leading-relaxed tracking-wide text-white outline-none placeholder:text-white/20"
+              className="flex-1 min-w-0 bg-transparent px-3 py-2 text-[15px] font-medium tracking-wide text-white outline-none placeholder:text-white/25"
               style={{
-                color: isCritical ? "#ff0040" : "#ffffff",
-                filter: isCritical ? "blur(0.8px)" : "none",
+                color: isCritical ? "#ff3060" : "#ffffff",
+                filter: isCritical ? "blur(0.6px)" : "none",
                 textShadow: isCritical
-                  ? "0 0 8px rgba(255,0,64,0.5)"
+                  ? "0 0 6px rgba(255,0,64,0.4)"
                   : "none",
                 transition:
                   "color 0.3s ease, filter 0.3s ease, text-shadow 0.3s ease",
               }}
             />
 
-            {/* Meta row: Écho + token counter */}
-            <div className="flex items-center justify-between">
-              {/* Écho indicator */}
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">
-                  Écho
-                </span>
-                <span
-                  className="font-mono text-[10px] font-bold tabular-nums"
-                  style={{
-                    color:
-                      permanentDamage > 0
-                        ? "#ff0040"
-                        : "rgba(255,255,255,0.20)",
-                  }}
-                >
-                  {(permanentDamage * 100).toFixed(1)}%
-                </span>
-              </div>
+            {/* ── Send Button ─────────────────────────────────────────── */}
+            <motion.button
+              type="button"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors"
+              style={{
+                backgroundColor: isCritical
+                  ? "rgba(255,0,64,0.2)"
+                  : "rgba(255,255,255,0.12)",
+              }}
+              variants={glitchVariants}
+              animate={isMeltdown ? "glitch" : "idle"}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              aria-label="Envoyer"
+            >
+              <ArrowUpIcon color={btnColor} />
+            </motion.button>
+          </div>
 
-              {/* Token counter */}
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="font-mono text-xs font-bold tabular-nums tracking-wider"
-                  style={{ color: barColor }}
-                >
-                  {String(charCount).padStart(3, "0")}
-                </span>
-                <span className="font-mono text-xs text-white/25">
-                  / {maxChars}
-                </span>
-                <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-white/15">
-                  Tokens
-                </span>
-              </div>
+          {/* ── Meta Row: Écho + Token Counter ────────────────────────── */}
+          <div className="mt-2 flex w-full max-w-md items-center justify-between px-4">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/25">
+                Écho
+              </span>
+              <span
+                className="font-mono text-[10px] font-bold tabular-nums"
+                style={{
+                  color:
+                    permanentDamage > 0
+                      ? "#ff0040"
+                      : "rgba(255,255,255,0.18)",
+                }}
+              >
+                {(permanentDamage * 100).toFixed(1)}%
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span
+                className="font-mono text-[11px] font-bold tabular-nums tracking-wider"
+                style={{ color: barColor }}
+              >
+                {String(charCount).padStart(3, "0")}
+              </span>
+              <span className="font-mono text-[11px] text-white/20">
+                / {maxChars}
+              </span>
+              <span className="text-[8px] font-semibold uppercase tracking-[0.15em] text-white/15">
+                Tokens
+              </span>
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
 
-      {/* ── OXYGEN CRITICAL — Full-screen Alert ───────────────────────── */}
+      {/* ── OXYGEN CRITICAL — Full-screen Jumpscare ───────────────────── */}
       <AnimatePresence>
-        {isOxygenDepleted && (
+        {isMeltdown && (
           <motion.div
             key="oxygen-critical"
-            className="fixed inset-0 z-[60] flex flex-col items-center justify-center"
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center pointer-events-none"
             variants={alertVariants}
             initial="initial"
             animate="animate"
@@ -250,55 +332,46 @@ export default function PromptInput() {
           >
             {/* Red vignette */}
             <div
-              className="pointer-events-none absolute inset-0"
+              className="absolute inset-0"
               style={{
                 background:
-                  "radial-gradient(ellipse at center, transparent 20%, rgba(255,0,64,0.18) 100%)",
+                  "radial-gradient(ellipse at center, transparent 20%, rgba(255,0,64,0.15) 100%)",
               }}
             />
 
-            {/* Horizontal glitch scanline */}
+            {/* Glitch scanline */}
             <motion.div
-              className="pointer-events-none absolute left-0 right-0 h-px"
-              style={{ backgroundColor: "rgba(255,0,64,0.5)" }}
-              animate={{ top: ["5%", "95%", "5%"] }}
-              transition={{
-                duration: 1.8,
-                repeat: Infinity,
-                ease: "linear",
-              }}
+              className="absolute left-0 right-0 h-px"
+              style={{ backgroundColor: "rgba(255,0,64,0.4)" }}
+              animate={{ top: ["8%", "92%", "8%"] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
             />
 
-            {/* Warning content */}
+            {/* Warning text */}
             <div className="relative select-none text-center">
               <motion.p
-                className="text-7xl font-black tracking-widest md:text-9xl"
+                className="text-6xl font-black tracking-widest md:text-8xl"
                 style={{
                   color: "#ff0040",
                   textShadow:
-                    "0 0 40px rgba(255,0,64,0.9), 0 0 80px rgba(255,0,64,0.4), 0 0 160px rgba(255,0,64,0.15)",
+                    "0 0 40px rgba(255,0,64,0.9), 0 0 80px rgba(255,0,64,0.35), 0 0 160px rgba(255,0,64,0.12)",
                 }}
-                animate={{ opacity: [1, 0.5, 1] }}
-                transition={{
-                  duration: 0.12,
-                  repeat: Infinity,
-                }}
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 0.1, repeat: Infinity }}
               >
                 ⚠
               </motion.p>
-
               <p
-                className="mt-4 font-mono text-sm font-bold uppercase tracking-[0.35em] md:text-lg"
+                className="mt-3 font-mono text-sm font-bold uppercase tracking-[0.35em] md:text-base"
                 style={{
                   color: "#ff0040",
-                  textShadow: "0 0 20px rgba(255,0,64,0.7)",
+                  textShadow: "0 0 20px rgba(255,0,64,0.6)",
                 }}
               >
                 Oxygen Critical
               </p>
-
               <motion.p
-                className="mt-2 font-mono text-[10px] uppercase tracking-[0.5em] text-white/30"
+                className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.45em] text-white/30"
                 animate={{ opacity: [0.2, 0.7, 0.2] }}
                 transition={{
                   duration: 1.2,
@@ -306,7 +379,7 @@ export default function PromptInput() {
                   ease: "easeInOut",
                 }}
               >
-                Damage irreversible — System collapse imminent
+                System collapse imminent
               </motion.p>
             </div>
           </motion.div>
