@@ -11,6 +11,7 @@ import River from "@/components/3d/River";
 import Forest from "@/components/3d/Forest";
 import Decorations from "@/components/3d/Decorations";
 import Animals from "@/components/3d/Animals";
+import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocessing";
 
 function SceneLight() {
   const stress = useStore(s => s.stressLevel);
@@ -110,12 +111,20 @@ export default function Home() {
 
           {/* Contact Shadows for Ground Realism */}
           <ContactShadows
-            position={[0, -0.5, 0]}
             opacity={0.4}
             scale={100}
             blur={2}
             far={10}
+            resolution={256}
+            color="#000000"
           />
+
+          {/* Post-Processing Effects for Cinematic Look */}
+          <EffectComposer>
+            <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={0.5} />
+            <Noise opacity={0.02} />
+            <Vignette eskil={false} offset={0.1} darkness={1.1} />
+          </EffectComposer>
 
           <ImmersionEffects />
         </Canvas>
