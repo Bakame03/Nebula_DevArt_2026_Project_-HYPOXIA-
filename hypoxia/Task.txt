@@ -1,0 +1,49 @@
+Dev 1 -> Baillo
+- src/store/useStore.ts
+- src/components/ui/PromptInput.tsx
+----------
+> "Agis comme un expert React/Zustand. Crée un store global `src/store/useStore.ts`.
+> Il doit contenir :
+> 1. `promptText` (string)
+> 2. `stressLevel` (number 0-1) : calculé en fonction de la longueur du texte.
+> 3. `permanentDamage` (number 0-1) : C'est la "Cicatrice". Si le stress dépasse 0.8, cette valeur augmente irréversiblement.
+> Crée ensuite un composant `PromptInput.tsx` utilisant Framer Motion qui fait trembler l'input quand le stress est haut et affiche une alerte rouge si stress > 0.9."
+
+Dev 2 -> Djawad
+- src/components/3d/River.tsx
+- src/components/3d/Forest.tsx
+-----------
+> "Agis comme un expert Three.js et React Three Fiber.
+> Je veux deux composants : `River.tsx` et `Forest.tsx`.
+> Ils doivent s'abonner au store Zustand (`useStore`) pour récupérer `stressLevel` et `permanentDamage`.
+> 1. La Rivière : Doit être un Mesh plan bleu qui devient marron/boueux et dont le scale Y diminue quand le stress augmente.
+> 2. La Forêt : Doit être un groupe de cônes (arbres low poly). Quand le stress monte, leur couleur passe de Vert à Noir (brûlé).
+> Utilise `@react-three/drei` pour les matériaux si besoin."
+
+Dev 3 -> Alex
+- src/components/effects/ImmersionEffects.tsx
+-------
+"Agis comme un expert en Shaders et React Three Postprocessing.
+> Crée le composant `ImmersionEffects.tsx` à placer dans un Canvas R3F.
+> Récupère `stressLevel` et `permanentDamage` depuis le store Zustand.
+> Combine ces effets :
+> 1. `Vignette` : Devient plus sombre et intense avec le stress (Vision tunnel).
+> 2. `Noise` : Augmente l'opacité avec `permanentDamage` (Effet sale/cicatrice).
+> 3. `ChromaticAberration` : Sépare les couleurs RGB quand le stress est critique (Vertige).
+> 4. `Glitch` : S'active uniquement si stress > 0.9."
+
+
+Dev 4 -> Aminata
+- src/components/audio/SoundManager.tsx
+- (+ trouver un mp3 de respiration)
+--------
+> "Agis comme un expert React et Howler.js.
+> Crée un composant invisible `SoundManager.tsx`.
+> Il doit charger un fichier son `/sounds/breathing.mp3` en boucle.
+> Abonne-toi au store Zustand (`stressLevel`).
+> Logique :
+> * Plus le stress monte, plus le `rate` (vitesse) de lecture augmente (jusqu'à x2.5).
+> * Plus le stress monte, plus le `volume` augmente.
+> Gère proprement le `useEffect` pour charger/décharger le son."
+
+

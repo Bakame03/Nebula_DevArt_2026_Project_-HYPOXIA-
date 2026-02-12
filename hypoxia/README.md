@@ -59,30 +59,6 @@ npm run dev
 
 Ouvrez [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) et mettez votre casque audio 🎧.
 
----
-
-## 📂 Architecture du Projet
-
-Pour faciliter la collaboration, le projet est divisé en modules étanches :
-
-text
-/src
-  /store           # LE CERVEAU
-    └── useStore.ts      # Gestion du stress et de la "Cicatrice" (Écho)
-  /components
-    /3d            # L'ENVIRONNEMENT
-      ├── River.tsx      # La rivière qui s'assèche
-      ├── Forest.tsx     # La forêt qui brûle
-      └── Effects.tsx    # Les Shaders (Flou, Glitch, Asphyxie)
-    /ui            # L'INTERFACE
-      └── PromptInput.tsx # L'input qui tremble et réagit
-    /audio         # LE SON
-      └── SoundManager.tsx # Gestion de la respiration dynamique
-
-
-
----
-
 ## 👥 L'Équipe (La Team)
 
 * **Membre 1 :** Lead Architect & UI (Le Cerveau)
@@ -142,3 +118,107 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+## Code Explanations for each member
+
+# 📜 PROTOCOLE "HYPOXIA" : GUIDE DE DÉVELOPPEMENT & RÉPARTITION
+
+## 1. L'ARCHITECTURE DU PROJET (La Carte)
+
+**Arborescence des fichiers à respecter :**
+
+```text
+/src
+  /app
+    page.tsx             <-- (Zone Commune - Assemblage final par DEV 1)
+    layout.tsx           <-- (Zone Commune)
+  /store
+    useStore.ts          <-- (DEV 1) Le Cerveau (Zustand)
+  /components
+    /ui                  <-- (DEV 1) Interface 2D
+      PromptInput.tsx
+      HypoxiaOverlay.tsx
+    /3d                  <-- (DEV 2) Environnement 3D
+      River.tsx
+      Forest.tsx
+    /effects             <-- (DEV 3) Post-Processing
+      ImmersionEffects.tsx
+    /audio               <-- (DEV 4) Son
+      SoundManager.tsx
+
+
+### 👤 DEV 1 : L'ARCHITECTE & UI (Chef des Opérations)
+
+**Responsabilité :** Tu crées le "Cerveau" (Store) et l'Interface de saisie (Input). C'est toi qui définis les règles du jeu (Stress, Dégâts permanents).
+**Tes Fichiers :** `src/store/useStore.ts`, `src/components/ui/PromptInput.tsx`
+
+**Ton Prompt pour l'IA :**
+
+> "Agis comme un expert React/Zustand. Crée un store global `src/store/useStore.ts`.
+> Il doit contenir :
+> 1. `promptText` (string)
+> 2. `stressLevel` (number 0-1) : calculé en fonction de la longueur du texte.
+> 3. `permanentDamage` (number 0-1) : C'est la "Cicatrice". Si le stress dépasse 0.8, cette valeur augmente irréversiblement.
+> Crée ensuite un composant `PromptInput.tsx` utilisant Framer Motion qui fait trembler l'input quand le stress est haut et affiche une alerte rouge si stress > 0.9."
+> 
+> 
+
+---
+
+### 👤 DEV 2 : LE CONSTRUCTEUR DE MONDE (3D Environment)
+
+**Responsabilité :** Tu crées la rivière qui sèche et la forêt qui brûle. Ta scène doit réagir au `stressLevel`.
+**Tes Fichiers :** `src/components/3d/River.tsx`, `src/components/3d/Forest.tsx`
+
+**Ton Prompt pour l'IA :**
+
+> "Agis comme un expert Three.js et React Three Fiber.
+> Je veux deux composants : `River.tsx` et `Forest.tsx`.
+> Ils doivent s'abonner au store Zustand (`useStore`) pour récupérer `stressLevel` et `permanentDamage`.
+> 1. La Rivière : Doit être un Mesh plan bleu qui devient marron/boueux et dont le scale Y diminue quand le stress augmente.
+> 2. La Forêt : Doit être un groupe de cônes (arbres low poly). Quand le stress monte, leur couleur passe de Vert à Noir (brûlé).
+> Utilise `@react-three/drei` pour les matériaux si besoin."
+> 
+> 
+
+---
+
+### 👤 DEV 3 : LE MAÎTRE DES EFFETS (VFX & Post-Processing)
+
+**Responsabilité :** Tu crées l'asphyxie visuelle. Le flou, la vignette noire, le glitch. C'est toi qui rends l'expérience "douloureuse".
+**Tes Fichiers :** `src/components/effects/ImmersionEffects.tsx`
+
+**Ton Prompt pour l'IA :**
+
+> "Agis comme un expert en Shaders et React Three Postprocessing.
+> Crée le composant `ImmersionEffects.tsx` à placer dans un Canvas R3F.
+> Récupère `stressLevel` et `permanentDamage` depuis le store Zustand.
+> Combine ces effets :
+> 1. `Vignette` : Devient plus sombre et intense avec le stress (Vision tunnel).
+> 2. `Noise` : Augmente l'opacité avec `permanentDamage` (Effet sale/cicatrice).
+> 3. `ChromaticAberration` : Sépare les couleurs RGB quand le stress est critique (Vertige).
+> 4. `Glitch` : S'active uniquement si stress > 0.9."
+> 
+> 
+
+---
+
+### 👤 DEV 4 : L'INGÉNIEUR SONORE (Sound Design)
+
+**Responsabilité :** L'immersion auditive. Le son de respiration qui s'accélère. C'est crucial pour l'angoisse.
+**Tes Fichiers :** `src/components/audio/SoundManager.tsx` (+ trouver un mp3 de respiration).
+
+**Ton Prompt pour l'IA :**
+
+> "Agis comme un expert React et Howler.js.
+> Crée un composant invisible `SoundManager.tsx`.
+> Il doit charger un fichier son `/sounds/breathing.mp3` en boucle.
+> Abonne-toi au store Zustand (`stressLevel`).
+> Logique :
+> * Plus le stress monte, plus le `rate` (vitesse) de lecture augmente (jusqu'à x2.5).
+> * Plus le stress monte, plus le `volume` augmente.
+> Gère proprement le `useEffect` pour charger/décharger le son."
+> 
+> 
+
