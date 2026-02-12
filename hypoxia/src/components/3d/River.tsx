@@ -13,12 +13,27 @@ const RiverWaterMaterial = shaderMaterial(
     uColor: new THREE.Color("#60a5fa"),
     uStress: 0,
   },
-  // Vertex Shader
+  // Vertex Shader (TURBULENT WATERS UPGRADE)
   `
     varying vec2 vUv;
+    uniform float uTime;
+    uniform float uStress;
+
     void main() {
       vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      vec3 pos = position;
+
+      // Phase 2: Turbulent Waters
+      // Waves act based on stress. calm = flat, stress = choppy.
+      float waveX = sin(pos.x * 2.0 + uTime * 3.0);
+      float waveZ = sin(pos.z * 1.5 + uTime * 2.5);
+      
+      // Displacement amplitude increases with stress (0 -> 0.4)
+      float displacement = (waveX + waveZ) * (uStress * 0.4);
+      
+      pos.y += displacement;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     }
   `,
   // Fragment Shader
@@ -104,7 +119,8 @@ export default function River() {
 
   const geometry = useMemo(() => {
     // Radius 4.5 ensures visibility without clipping too much into terrain
-    const geo = new THREE.TubeGeometry(riverCurve, 64, 4.5, 12, false);
+    // Increased radial segments to 16 for better wave definition
+    const geo = new THREE.TubeGeometry(riverCurve, 64, 4.5, 16, false);
     return geo;
   }, []);
 
