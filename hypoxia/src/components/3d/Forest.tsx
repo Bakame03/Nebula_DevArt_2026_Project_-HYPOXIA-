@@ -20,7 +20,6 @@ export default function Forest() {
   const trees = useMemo(() => {
     // Local generator
     const rng = new seededRandom(67890);
-
     const validTrees = [];
     let attempts = 0;
 
@@ -43,15 +42,25 @@ export default function Forest() {
         validTrees.push({ x, y, z, scale, type });
       }
     }
-    console.log("Forest: Generated trees:", validTrees.length);
     return validTrees;
   }, []);
 
+  // Update layout and decay based on stress
   useLayoutEffect(() => {
     if (!trunkMesh.current || !foliageMesh.current) return;
 
     // Local generator for layout effect
     const rng = new seededRandom(13579);
+
+    const burnLevel = Math.min(stressLevel + permanentDamage, 1);
+
+    // SKELETON FOREST LOGIC:
+    // Trunks: Conform to burnLevel (Brown -> Black Charcoal)
+    // Foliage: Scales down to 0 (Shedding) and turns Black
+
+    // Foliage Scale Factor: 1.0 -> 0.0
+    // Starts shedding at 0.2 stress, fully bare by 0.9
+    const shedFactor = Math.max(0, 1 - (burnLevel * 1.2));
 
     let foliageIndex = 0;
 
@@ -63,10 +72,30 @@ export default function Forest() {
       tempObject.updateMatrix();
       trunkMesh.current!.setMatrixAt(i, tempObject.matrix);
 
-      // Init trunk color
-      trunkMesh.current!.setColorAt(i, new THREE.Color("#3e2723"));
+      // Trunk Color: Brown (#3e2723) -> Charcoal (#0a0a0a)
+      const baseTrunk = new THREE.Color("#3e2723");
+      const burntTrunk = new THREE.Color("#0a0a0a");
+      tempColor.copy(baseTrunk).lerp(burntTrunk, burnLevel);
+      trunkMesh.current!.setColorAt(i, tempColor);
 
       // 2. FOLIAGE
+      // Base Color Calculation
+      let baseFoliage;
+      if (tree.type < 0.3) baseFoliage = new THREE.Color("#22c55e");
+      else if (tree.type < 0.6) baseFoliage = new THREE.Color("#16a34a");
+      else baseFoliage = new THREE.Color("#15803d");
+
+      // Burn Foliage: Green -> Dead Brown -> Black
+      const deadFoliage = new THREE.Color("#4e342e");
+      const burntFoliage = new THREE.Color("#000000");
+
+      // Color lerp
+      if (burnLevel < 0.5) {
+        tempColor.copy(baseFoliage).lerp(deadFoliage, burnLevel * 2);
+      } else {
+        tempColor.copy(deadFoliage).lerp(burntFoliage, (burnLevel - 0.5) * 2);
+      }
+
       for (let f = 0; f < FOLIAGE_PER_TREE; f++) {
         const yOffset = (2 + rng.next() * 1.5) * tree.scale;
         const xOffset = (rng.next() - 0.5) * 1.5 * tree.scale;
@@ -78,12 +107,16 @@ export default function Forest() {
           tree.z + zOffset
         );
 
-        const fScale = tree.scale * (0.8 + rng.next() * 0.7);
+        // Apply shedding scale (Verified feature from remote, adapted to local RNG)
+        const fScale = tree.scale * (0.8 + rng.next() * 0.7) * shedFactor;
+
+        // If scale is effectively 0, we can hide it or just set scale to 0
         tempObject.scale.set(fScale, fScale, fScale);
         tempObject.rotation.set(rng.next() * Math.PI, rng.next() * Math.PI, rng.next() * Math.PI);
 
         tempObject.updateMatrix();
         foliageMesh.current!.setMatrixAt(foliageIndex, tempObject.matrix);
+        foliageMesh.current!.setColorAt(foliageIndex, tempColor);
         foliageIndex++;
       }
     });
@@ -92,46 +125,6 @@ export default function Forest() {
     if (trunkMesh.current.instanceColor) trunkMesh.current.instanceColor.needsUpdate = true;
 
     foliageMesh.current.instanceMatrix.needsUpdate = true;
-  }, [trees]);
-
-  // Update Colors AND Count based on Stress
-  useLayoutEffect(() => {
-    if (!foliageMesh.current || !trunkMesh.current) return;
-
-    const burnLevel = Math.min(stressLevel + permanentDamage, 1);
-
-    // Tree Disappearance Logic:
-    // Low Stress (High Water) -> 100% trees visible
-    // High Stress (Low Water) -> 0% trees visible
-    const visibleRatio = 1 - stressLevel;
-    const keptTrees = Math.floor(trees.length * Math.max(0, visibleRatio));
-
-    // Update InstancedMesh count to hide/show trees
-    trunkMesh.current.count = keptTrees;
-    foliageMesh.current.count = keptTrees * FOLIAGE_PER_TREE;
-
-    let foliageIndex = 0;
-    trees.forEach((tree, i) => {
-      // Optimization: Only update color for visible trees
-      if (i >= keptTrees) return;
-
-      // Base Color Calculation (MYSTIC RIVER - VIBRANT LUSH GREENS)
-      let baseColor;
-      // Tender, vibrant green variations
-      if (tree.type < 0.3) baseColor = new THREE.Color("#22c55e"); // Bright Green
-      else if (tree.type < 0.6) baseColor = new THREE.Color("#16a34a"); // Medium Green
-      else baseColor = new THREE.Color("#15803d"); // Deep Green
-
-      // Apply Burn (Blackening)
-      // Dev 2 Requirement: Green -> Black (Burnt)
-      tempColor.copy(baseColor).lerp(new THREE.Color("#000000"), burnLevel);
-
-      for (let f = 0; f < FOLIAGE_PER_TREE; f++) {
-        foliageMesh.current!.setColorAt(foliageIndex, tempColor);
-        foliageIndex++;
-      }
-    });
-
     if (foliageMesh.current.instanceColor) foliageMesh.current.instanceColor.needsUpdate = true;
 
   }, [trees, stressLevel, permanentDamage]);
@@ -145,10 +138,10 @@ export default function Forest() {
         <meshStandardMaterial color="#3e2723" roughness={0.95} metalness={0.0} envMapIntensity={0.2} />
       </instancedMesh>
 
-      {/* FOLIAGE (Cones for Low Poly Look) */}
+      {/* FOLIAGE */}
       <instancedMesh ref={foliageMesh} args={[undefined, undefined, trees.length * FOLIAGE_PER_TREE]}>
         <coneGeometry args={[1.2, 2.5, 6]} />
-        <meshStandardMaterial roughness={0.7} metalness={0.0} envMapIntensity={0.5} vertexColors={false} />
+        <meshStandardMaterial roughness={0.7} metalness={0.0} envMapIntensity={0.5} vertexColors={true} />
       </instancedMesh>
     </group>
   );

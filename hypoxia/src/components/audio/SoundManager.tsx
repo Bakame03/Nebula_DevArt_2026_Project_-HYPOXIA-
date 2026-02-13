@@ -174,12 +174,12 @@ export default function SoundManager() {
       }
 
       // ════════════════════════════════════════════════════════
-      // 🐦 COUCHE 2 : OISEAUX (disparaissent TOTALEMENT avec le stress)
+      // 🐦 COUCHE 2 : OISEAUX (disparaissent TOTALEMENT très vite)
       // ════════════════════════════════════════════════════════
-      // Volume : 0.5 → 0.0 très vite (dès 40% de stress, silence total)
-      // Rate : 1.0 → 0.6
-      let birdsVolTarget = clamp(0.5 * (1 - stress * 2.5), 0, 0.5); // Coupe plus vite !
-      if (stress > 0.4) birdsVolTarget = 0; // Sécurité absolue : silence total après 40%
+      // Volume : 0.5 → 0.0 (Silence complet dès 0.20 de stress / 40 caractères)
+      // Cela évite le fameux "cri de coq" qui semble être dans ce fichier
+      let birdsVolTarget = clamp(0.5 * (1 - stress * 5.0), 0, 0.5);
+      if (stress > 0.2) birdsVolTarget = 0; // Sécurité : Silence absolu après 40 chars
 
       currentBirdsVol.current = lerp(currentBirdsVol.current, birdsVolTarget, lerpSpeed);
 

@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
-import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import * as THREE from "three";
+import { Canvas, useThree } from "@react-three/fiber";
 import { Environment, ContactShadows } from "@react-three/drei";
 import { useStore } from "@/store/useStore";
 import PromptInput from "@/components/ui/PromptInput";
@@ -12,31 +11,24 @@ import River from "@/components/3d/River";
 import Forest from "@/components/3d/Forest";
 import Decorations from "@/components/3d/Decorations";
 import Animals from "@/components/3d/Animals";
-import Birds from "@/components/3d/Birds";
 import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocessing";
 
 function SceneLight() {
   const stress = useStore(s => s.stressLevel);
-  const light = React.useRef<THREE.DirectionalLight>(null);
-
-  useFrame(() => {
-    if (light.current) {
-      const color = new THREE.Color("#fff7ed").lerp(new THREE.Color("#EF4444"), stress);
-      light.current.color = color;
-    }
-  });
 
   return (
     <>
-      <ambientLight intensity={0.6 - (stress * 0.4)} color="#c7d2fe" />
+      {/* Ambiance Mystique (Mystic Mist) */}
+      <ambientLight intensity={0.6 - (stress * 0.3)} color="#c7d2fe" />
 
+      {/* Rayons Solaires (God Rays from Top-Left) */}
       <directionalLight
-        ref={light}
         position={[-50, 40, -40]} // Top-Left-Back
-        intensity={2.5}
+        intensity={2.5 - (stress * 1.0)} // Strong sunlight
         castShadow
+        color="#fff7ed" // Warm Sunlight
         shadow-bias={-0.0005}
-        shadow-mapSize={[4096, 4096]}
+        shadow-mapSize={[4096, 4096]} // High Res Shadows for God Rays
       >
         <orthographicCamera attach="shadow-camera" args={[-100, 100, 100, -100]} />
       </directionalLight>
@@ -111,54 +103,38 @@ export default function Home() {
       {/* 1. AUDIO (Invisible) */}
       <SoundManager />
 
-      {/* 2. MONDE 3D (Background Layers) */}
-      <div className="absolute inset-0 z-0 w-full h-full">
-        <Canvas
-          className="w-full h-full"
-          camera={{ position: [0, 6, 25], fov: 45 }}
-          shadows
-        >
-          {/* Brume Mystique (Mystic Mist) - Reactive */}
-          <color attach="background" args={['#e0e7ff']} />
-          <ReactiveFog />
+      {/* 2. UI (Au dessus de tout) */}
+      <PromptInput />
 
+      {/* 3. MONDE 3D */}
+      <div className="absolute inset-0 z-0">
+        <Canvas camera={{ position: [0, 2, 8], fov: 50 }}>
+          {/* BACKGROUND */}
+          <color attach="background" args={['#020617']} />
+
+          {/* FOG defaults (Overridden by ImmersionEffects if needed, but good baseline) */}
+          <fog attach="fog" args={['#020617', 5, 20]} />
+
+          {/* LIGHTING */}
           <SceneLight />
-          <ResponsiveCamera />
 
-          {/* Environment Map for Realistic Reflections */}
-          <Environment preset="forest" background={false} />
-
-          <Terrain />
+          {/* ENVIRONMENT */}
           <River />
-          <Decorations />
           <Forest />
           <Animals />
-          <Birds />
 
-          {/* Contact Shadows for Ground Realism */}
-          <ContactShadows
-            opacity={0.4}
-            scale={100}
-            blur={2}
-            far={10}
-            resolution={256}
-            color="#000000"
-          />
+          {/* INFINITE FLOOR (Dark) */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.1, 0]}>
+            <planeGeometry args={[100, 100]} />
+            <meshStandardMaterial color="#1e293b" />
+          </mesh>
 
-          {/* Post-Processing Effects for Cinematic Look */}
-          <EffectComposer>
-            <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={0.5} />
-            <Noise opacity={0.02} />
-            <Vignette eskil={false} offset={0.1} darkness={1.1} />
-          </EffectComposer>
+          {/* PHASE 3: PARTICULES DE CENDRE */}
+          <AshParticles />
 
+          {/* POST-PROCESSING */}
           <ImmersionEffects />
         </Canvas>
-      </div>
-
-      {/* 3. UI (Foreground Layer) */}
-      <div className="absolute inset-0 z-10 w-full h-full pointer-events-none">
-        <PromptInput />
       </div>
     </main>
   );
