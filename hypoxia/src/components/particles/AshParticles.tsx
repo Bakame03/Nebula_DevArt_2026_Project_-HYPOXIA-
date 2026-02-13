@@ -8,24 +8,24 @@ import seededRandom from "@/utils/seededRandom";
 export default function AshParticles() {
     const { permanentDamage } = useStore();
     const meshRef = useRef<THREE.InstancedMesh>(null);
+    const rng = useMemo(() => new seededRandom(999), []);
 
     const COUNT = 1000;
 
     // Initial positions
     const particles = useMemo(() => {
-        seededRandom.reset(999);
         const data = [];
         for (let i = 0; i < COUNT; i++) {
             // Random position in a large volume around player
-            const x = (seededRandom.next() - 0.5) * 100;
-            const y = seededRandom.next() * 30;
-            const z = (seededRandom.next() - 0.5) * 100;
+            const x = (rng.next() - 0.5) * 100;
+            const y = rng.next() * 30;
+            const z = (rng.next() - 0.5) * 100;
             // Random speed factor
-            const speed = 0.5 + seededRandom.next() * 1.5;
+            const speed = 0.5 + rng.next() * 1.5;
             data.push({ x, y, z, speed, initialY: y });
         }
         return data;
-    }, []);
+    }, [rng]);
 
     const dummy = useMemo(() => new THREE.Object3D(), []);
 
@@ -54,7 +54,7 @@ export default function AshParticles() {
             // Reset if too low
             if (p.y < -5) {
                 p.y = 30;
-                p.x = (seededRandom.next() - 0.5) * 100; // Reset X to keep field full
+                p.x = (rng.next() - 0.5) * 100; // Reset X to keep field full
             }
 
             dummy.position.set(p.x, p.y, p.z);
