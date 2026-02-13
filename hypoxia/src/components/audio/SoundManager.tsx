@@ -222,7 +222,7 @@ export default function SoundManager() {
     // 🚨 Alerte Prison (BANK_Alerte)
     alertRef.current = new Howl({
       // sounds/BANK_Alerte.mp3
-      src: ['/sounds/BANKAlerte.mp3'],
+      src: ['/sounds/BANK_Alerte.mp3'],
       loop: true,
       volume: 0,
       html5: false,
