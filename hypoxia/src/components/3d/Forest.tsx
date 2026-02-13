@@ -15,8 +15,14 @@ export default function Forest() {
 
   const TREE_COUNT = 200;
 
-  // ── Load Tree Sprite Texture ────────────────────────────────────────
+  // ── Load Tree Sprite Textures ───────────────────────────────────────
   const treeTexture = useTexture("/textures/tree_sprite.png");
+  // Assumes dead_tree_sprite.png will be placed in public/textures/
+  const deadTreeTexture = useTexture("/textures/dead_tree_sprite.png");
+
+  // Determines if trees should be dead based on input length
+  const promptText = useStore(s => s.promptText);
+  const isDead = promptText.length >= 150;
 
   // ── Billboard PlaneGeometry (tall rectangle for tree) ───────────────
   const planeGeo = useMemo(() => {
@@ -87,7 +93,7 @@ export default function Forest() {
   return (
     <instancedMesh ref={meshRef} args={[planeGeo, undefined, trees.length]}>
       <meshStandardMaterial
-        map={treeTexture}
+        map={isDead ? deadTreeTexture : treeTexture}
         alphaTest={0.5}
         transparent
         side={THREE.DoubleSide}

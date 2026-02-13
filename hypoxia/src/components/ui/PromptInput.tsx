@@ -74,6 +74,24 @@ function ArrowUpIcon({ color = "currentColor" }: { color?: string }) {
   );
 }
 
+function ResetIcon({ color = "currentColor" }: { color?: string }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PromptInput() {
@@ -84,6 +102,7 @@ export default function PromptInput() {
   const permanentDamage = useStore((s) => s.permanentDamage);
   const maxChars = useStore((s) => s.maxChars);
   const setPrompt = useStore((s) => s.setPrompt);
+  const reset = useStore((s) => s.reset);
 
   const isCritical = stressLevel > 0.8;
 
@@ -95,6 +114,13 @@ export default function PromptInput() {
     },
     [maxChars, setPrompt],
   );
+
+  const handleReset = useCallback(() => {
+    reset();
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [reset]);
 
   // ── Dynamic style tokens ────────────────────────────────────────────────
   const borderColor = isCritical
@@ -113,6 +139,9 @@ export default function PromptInput() {
   const plusIconColor = isCritical ? "#ff0040" : "rgba(255,255,255,0.55)";
   const sendBtnBg = isCritical ? "#ff0040" : "#ffffff";
   const sendIconColor = isCritical ? "#ffffff" : "#000000";
+
+  const resetBtnBg = isCritical ? "rgba(255,0,64,0.1)" : "rgba(255,255,255,0.05)";
+  const resetIconColor = isCritical ? "#ff2050" : "rgba(255,255,255,0.4)";
 
   return (
     // ── Fullscreen container — blocks nothing ──────────────────────────────
@@ -221,6 +250,22 @@ export default function PromptInput() {
                   "color 0.3s ease, filter 0.3s ease, text-shadow 0.3s ease",
               }}
             />
+
+            {/* ── Reset / Trash Button ──────────────────────────────────── */}
+            <motion.button
+              type="button"
+              onClick={handleReset}
+              className="relative z-10 flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full transition-all duration-300 border"
+              style={{
+                backgroundColor: resetBtnBg,
+                borderColor: isCritical ? "rgba(255,0,64,0.15)" : "rgba(255,255,255,0.05)",
+              }}
+              whileHover={{ scale: 1.1, rotate: -15, backgroundColor: isCritical ? "rgba(255,0,64,0.2)" : "rgba(255,255,255,0.12)" }}
+              whileTap={{ scale: 0.9, rotate: 45 }}
+              aria-label="Réinitialiser"
+            >
+              <ResetIcon color={resetIconColor} />
+            </motion.button>
 
             {/* ── Send Button ───────────────────────────────────────────── */}
             <motion.button
