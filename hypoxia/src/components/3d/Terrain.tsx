@@ -1,7 +1,8 @@
 "use client";
 import { useStore } from "@/store/useStore";
-import { useMemo, useLayoutEffect, useRef } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
+import { useTexture } from "@react-three/drei";
 import { riverCurve, getTerrainHeight } from "@/utils/terrainLogic";
 import seededRandom from "@/utils/seededRandom";
 
@@ -9,20 +10,26 @@ export default function Terrain() {
     const { stressLevel } = useStore();
     const meshRef = useRef<THREE.Mesh>(null);
 
-    // Géométrie du terrain (Haute résolution pour les détails)
+    // ── Load Grass Texture ────────────────────────────────────────────
+    const grassTexture = useTexture("/textures/grass_texture.png");
+
+    useMemo(() => {
+        grassTexture.wrapS = THREE.RepeatWrapping;
+        grassTexture.wrapT = THREE.RepeatWrapping;
+        grassTexture.repeat.set(20, 20); // Tile across the terrain
+    }, [grassTexture]);
+
     // Géométrie du terrain (Haute résolution pour les détails)
     const geometry = useMemo(() => {
-        // Local generator instance for perfect isolation
         const rng = new seededRandom(12345);
 
-        // Plane de 100x100 avec haute résolution pour détails photoréalistes
         const geo = new THREE.PlaneGeometry(100, 100, 256, 256);
         geo.rotateX(-Math.PI / 2);
 
         const posAttribute = geo.attributes.position;
         const vertex = new THREE.Vector3();
 
-        // Modification des vertex pour créer le lit de la rivière
+        // Vertex coloring for riverbed vs banks vs forest floor
         const colors = [];
         const color = new THREE.Color();
 
@@ -34,18 +41,17 @@ export default function Terrain() {
             // Vertex Coloring Logic - Mystic River Palette
             if (height < -1.8) {
                 // River Bed (Dark Rich Mud)
-                color.set("#1c1917"); // Deep Brown-Black
+                color.set("#1c1917");
             } else if (height < -0.1) {
-                // Banks (Ochre/Clay) - Cracked Earth
-                const t = (height + 1.8) / 1.7; // 0 to 1
-                color.set("#b45309").lerp(new THREE.Color("#d97706"), t); // Dark to Light Ochre
+                // Banks (Ochre/Clay)
+                const t = (height + 1.8) / 1.7;
+                color.set("#b45309").lerp(new THREE.Color("#d97706"), t);
             } else {
-                // Forest Floor (Tender Greens)
-                const baseGreen = rng.next() > 0.5 ? "#86efac" : "#4ade80"; // Soft greens
-                color.set(baseGreen);
+                // Forest Floor — white tint so grass texture shows naturally
+                color.set("#ffffff");
                 // Subtle variation
-                const noise = (rng.next() - 0.5) * 0.15;
-                color.offsetHSL(0, noise * 0.2, noise);
+                const noise = (rng.next() - 0.5) * 0.1;
+                color.offsetHSL(0, 0, noise);
             }
             colors.push(color.r, color.g, color.b);
         }
@@ -55,12 +61,12 @@ export default function Terrain() {
         return geo;
     }, []);
 
-    // Material: Uses vertex colors
     return (
         <mesh ref={meshRef} geometry={geometry} receiveShadow>
             <meshStandardMaterial
+                map={grassTexture}
                 vertexColors
-                roughness={0.95}
+                roughness={0.9}
                 metalness={0.05}
                 flatShading={false}
                 envMapIntensity={0.3}

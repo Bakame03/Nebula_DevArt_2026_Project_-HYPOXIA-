@@ -1,7 +1,9 @@
 "use client";
 import { useStore } from "@/store/useStore";
 import { useRef, useMemo, useLayoutEffect } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useTexture } from "@react-three/drei";
 import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
 import seededRandom from "@/utils/seededRandom";
 
@@ -12,13 +14,28 @@ export default function Decorations() {
     const rockMesh = useRef<THREE.InstancedMesh>(null);
     const grassMesh = useRef<THREE.InstancedMesh>(null);
 
-    const ROCK_COUNT = 300; // Dense rocks for river obstacles
-    const GRASS_COUNT = 5000; // Lush vegetation
+    const ROCK_COUNT = 300;
+    const GRASS_COUNT = 5000;
+
+    // ── Load Grass Blade Sprite ───────────────────────────────────────
+    const grassSprite = useTexture("/textures/grass_blade.png");
+
+    // ── Load Bark Normal Map for rocks ────────────────────────────────
+    const rockNormal = useTexture("/textures/bark_normal.jpg");
+
+    useMemo(() => {
+        rockNormal.wrapS = THREE.RepeatWrapping;
+        rockNormal.wrapT = THREE.RepeatWrapping;
+        rockNormal.repeat.set(1, 1);
+    }, [rockNormal]);
+
+    // Billboard PlaneGeometry for grass blades
+    const grassPlane = useMemo(() => {
+        return new THREE.PlaneGeometry(0.6, 1.2);
+    }, []);
 
     const { rocks, ferns } = useMemo(() => {
-        // Local generator
         const rng = new seededRandom(24680);
-
         const _rocks = [];
         const _ferns = [];
 
@@ -34,7 +51,6 @@ export default function Decorations() {
                 if (dist < minDist) minDist = dist;
             }
 
-            // River Bed (0.5-3) + Banks (3-9)
             if (minDist > 0.5 && minDist < 9) {
                 const y = getTerrainHeight(x, z);
                 const scale = minDist < 3 ? 0.3 + rng.next() * 0.5 : 0.2 + rng.next() * 0.6;
@@ -42,7 +58,7 @@ export default function Decorations() {
             }
         }
 
-        // Ferns/Grass: Dense, especially on banks
+        // Grass blades: Dense vegetation
         for (let i = 0; i < GRASS_COUNT; i++) {
             const x = (rng.next() - 0.5) * 95;
             const z = (rng.next() - 0.5) * 95;
@@ -54,11 +70,11 @@ export default function Decorations() {
                 if (dist < minDist) minDist = dist;
             }
 
-            // Grass everywhere implies lush season
-            if (minDist > 3.5) { // Not inside water (starting from bank edge)
+            if (minDist > 3.5) {
                 const y = getTerrainHeight(x, z);
-                const scale = 0.5 + rng.next() * 0.8; // Larger for ferns
-                _ferns.push({ x, y, z, scale });
+                const scale = 0.5 + rng.next() * 0.8;
+                const rotY = rng.next() * Math.PI; // Random Y rotation
+                _ferns.push({ x, y, z, scale, rotY });
             }
         }
 
@@ -67,9 +83,7 @@ export default function Decorations() {
 
     useLayoutEffect(() => {
         if (rockMesh.current) {
-            // Local generator
             const rng = new seededRandom(11223);
-
             rocks.forEach((rock, i) => {
                 tempObject.position.set(rock.x, rock.y + (0.3 * rock.scale), rock.z);
                 tempObject.scale.set(rock.scale, rock.scale, rock.scale);
@@ -81,12 +95,11 @@ export default function Decorations() {
         }
 
         if (grassMesh.current) {
-            const rng = new seededRandom(33445);
-
             ferns.forEach((fern, i) => {
-                tempObject.position.set(fern.x, fern.y, fern.z);
-                tempObject.scale.set(fern.scale, fern.scale * 1.5, fern.scale); // Tall ferns
-                tempObject.rotation.set(0, rng.next() * Math.PI, 0);
+                // Position at ground level, offset up by half the plane height
+                tempObject.position.set(fern.x, fern.y + (0.6 * fern.scale), fern.z);
+                tempObject.scale.set(fern.scale, fern.scale * 1.5, fern.scale);
+                tempObject.rotation.set(0, fern.rotY, 0);
                 tempObject.updateMatrix();
                 grassMesh.current!.setMatrixAt(i, tempObject.matrix);
             });
@@ -94,26 +107,39 @@ export default function Decorations() {
         }
     }, [rocks, ferns]);
 
-    // Fern Color: Vibrant Green -> Dead Brown
-    const fernColor = new THREE.Color("#16a34a").lerp(new THREE.Color("#4b3621"), Math.min(stressLevel + permanentDamage, 1));
+    // Fern Color: Vibrant Green -> Dead Brown based on stress
+    const fernColor = new THREE.Color("#16a34a").lerp(
+        new THREE.Color("#4b3621"),
+        Math.min(stressLevel + permanentDamage, 1)
+    );
 
     return (
         <group>
-            {/* ROCKS (Grey River Stones) - Photorealistic */}
+            {/* ROCKS (Grey River Stones) with Normal Map */}
             <instancedMesh ref={rockMesh} args={[undefined, undefined, rocks.length]}>
                 <icosahedronGeometry args={[1, 1]} />
                 <meshStandardMaterial
                     color="#6b7280"
+                    normalMap={rockNormal}
+                    normalScale={new THREE.Vector2(0.7, 0.7)}
                     roughness={0.85}
                     metalness={0.15}
                     envMapIntensity={0.4}
                 />
             </instancedMesh>
 
-            {/* FERNS (using Cone for stylized look) */}
-            <instancedMesh ref={grassMesh} args={[undefined, undefined, ferns.length]}>
-                <coneGeometry args={[0.3, 1, 4]} />
-                <meshStandardMaterial color={fernColor} side={THREE.DoubleSide} />
+            {/* GRASS BLADES (Billboard sprites) */}
+            <instancedMesh ref={grassMesh} args={[grassPlane, undefined, ferns.length]}>
+                <meshStandardMaterial
+                    map={grassSprite}
+                    color={fernColor}
+                    alphaTest={0.5}
+                    transparent
+                    side={THREE.DoubleSide}
+                    roughness={0.8}
+                    metalness={0.0}
+                    depthWrite={true}
+                />
             </instancedMesh>
         </group>
     );
