@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import { Environment, ContactShadows } from "@react-three/drei";
 import { useStore } from "@/store/useStore";
 import PromptInput from "@/components/ui/PromptInput";
@@ -11,6 +12,8 @@ import River from "@/components/3d/River";
 import Forest from "@/components/3d/Forest";
 import Decorations from "@/components/3d/Decorations";
 import Animals from "@/components/3d/Animals";
+import Birds from "@/components/3d/Birds";
+import AshParticles from "@/components/particles/AshParticles";
 import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocessing";
 
 function SceneLight() {
@@ -99,42 +102,53 @@ function ReactiveFog() {
 export default function Home() {
   return (
     <main className="relative w-screen h-screen bg-black overflow-hidden select-none">
-
-      {/* 1. AUDIO (Invisible) */}
       <SoundManager />
 
-      {/* 2. UI (Au dessus de tout) */}
-      <PromptInput />
+      <div className="absolute inset-0 z-0 w-full h-full">
+        <Canvas
+          className="w-full h-full"
+          camera={{ position: [0, 6, 25], fov: 45 }}
+          shadows
+        >
+          <color attach="background" args={['#e0e7ff']} />
+          <ReactiveFog />
 
-      {/* 3. MONDE 3D */}
-      <div className="absolute inset-0 z-0">
-        <Canvas camera={{ position: [0, 2, 8], fov: 50 }}>
-          {/* BACKGROUND */}
-          <color attach="background" args={['#020617']} />
-
-          {/* FOG defaults (Overridden by ImmersionEffects if needed, but good baseline) */}
-          <fog attach="fog" args={['#020617', 5, 20]} />
-
-          {/* LIGHTING */}
           <SceneLight />
+          <ResponsiveCamera />
 
-          {/* ENVIRONMENT */}
+          <Environment preset="forest" background={false} />
+
+          <Terrain />
           <River />
+          <Decorations />
           <Forest />
           <Animals />
+          <Birds />
 
-          {/* INFINITE FLOOR (Dark) */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.1, 0]}>
-            <planeGeometry args={[100, 100]} />
-            <meshStandardMaterial color="#1e293b" />
-          </mesh>
+          <ContactShadows
+            opacity={0.4}
+            scale={100}
+            blur={2}
+            far={10}
+            resolution={256}
+            color="#000000"
+          />
+
+          <EffectComposer>
+            <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={0.5} />
+            <Noise opacity={0.02} />
+            <Vignette eskil={false} offset={0.1} darkness={1.1} />
+          </EffectComposer>
 
           {/* PHASE 3: PARTICULES DE CENDRE */}
           <AshParticles />
 
-          {/* POST-PROCESSING */}
           <ImmersionEffects />
         </Canvas>
+      </div>
+
+      <div className="absolute inset-0 z-10 w-full h-full pointer-events-none">
+        <PromptInput />
       </div>
     </main>
   );
