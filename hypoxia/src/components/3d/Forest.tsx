@@ -45,22 +45,15 @@ export default function Forest() {
     return validTrees;
   }, []);
 
-  // Update layout and decay based on stress
+  // Update layout (Static, lush forest)
   useLayoutEffect(() => {
     if (!trunkMesh.current || !foliageMesh.current) return;
 
     // Local generator for layout effect
     const rng = new seededRandom(13579);
 
-    const burnLevel = Math.min(stressLevel + permanentDamage, 1);
-
-    // SKELETON FOREST LOGIC:
-    // Trunks: Conform to burnLevel (Brown -> Black Charcoal)
-    // Foliage: Scales down to 0 (Shedding) and turns Black
-
-    // Foliage Scale Factor: 1.0 -> 0.0
-    // Starts shedding at 0.2 stress, fully bare by 0.9
-    const shedFactor = Math.max(0, 1 - (burnLevel * 1.2));
+    // RESTORED: No burn level, always healthy
+    // const burnLevel = Math.min(stressLevel + permanentDamage, 1);
 
     let foliageIndex = 0;
 
@@ -72,11 +65,9 @@ export default function Forest() {
       tempObject.updateMatrix();
       trunkMesh.current!.setMatrixAt(i, tempObject.matrix);
 
-      // Trunk Color: Brown (#3e2723) -> Charcoal (#0a0a0a)
+      // Trunk Color: Always Brown (#3e2723)
       const baseTrunk = new THREE.Color("#3e2723");
-      const burntTrunk = new THREE.Color("#0a0a0a");
-      tempColor.copy(baseTrunk).lerp(burntTrunk, burnLevel);
-      trunkMesh.current!.setColorAt(i, tempColor);
+      trunkMesh.current!.setColorAt(i, baseTrunk);
 
       // 2. FOLIAGE
       // Base Color Calculation
@@ -85,16 +76,8 @@ export default function Forest() {
       else if (tree.type < 0.6) baseFoliage = new THREE.Color("#16a34a");
       else baseFoliage = new THREE.Color("#15803d");
 
-      // Burn Foliage: Green -> Dead Brown -> Black
-      const deadFoliage = new THREE.Color("#4e342e");
-      const burntFoliage = new THREE.Color("#000000");
-
-      // Color lerp
-      if (burnLevel < 0.5) {
-        tempColor.copy(baseFoliage).lerp(deadFoliage, burnLevel * 2);
-      } else {
-        tempColor.copy(deadFoliage).lerp(burntFoliage, (burnLevel - 0.5) * 2);
-      }
+      // RESTORED: No color lerp to dead/black
+      tempColor.copy(baseFoliage);
 
       for (let f = 0; f < FOLIAGE_PER_TREE; f++) {
         const yOffset = (2 + rng.next() * 1.5) * tree.scale;
@@ -107,10 +90,9 @@ export default function Forest() {
           tree.z + zOffset
         );
 
-        // Apply shedding scale (Verified feature from remote, adapted to local RNG)
-        const fScale = tree.scale * (0.8 + rng.next() * 0.7) * shedFactor;
+        // RESTORED: No shedding factor
+        const fScale = tree.scale * (0.8 + rng.next() * 0.7);
 
-        // If scale is effectively 0, we can hide it or just set scale to 0
         tempObject.scale.set(fScale, fScale, fScale);
         tempObject.rotation.set(rng.next() * Math.PI, rng.next() * Math.PI, rng.next() * Math.PI);
 
@@ -127,7 +109,7 @@ export default function Forest() {
     foliageMesh.current.instanceMatrix.needsUpdate = true;
     if (foliageMesh.current.instanceColor) foliageMesh.current.instanceColor.needsUpdate = true;
 
-  }, [trees, stressLevel, permanentDamage]);
+  }, [trees]); // Removed stress dependencies for visual stability
 
 
   return (

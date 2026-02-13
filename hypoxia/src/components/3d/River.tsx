@@ -138,12 +138,12 @@ export default function River() {
   useFrame((state) => {
     if (materialRef.current) {
       materialRef.current.uTime = state.clock.getElapsedTime();
-      materialRef.current.uStress = stressLevel;
+      // Keep stress minimal for visuals (clean water)
+      materialRef.current.uStress = 0; // Fixed at 0 for clean look
 
-      // Color: Blue -> Deep Brown/Black
+      // Color: Blue (Fixed)
       const cleanColor = new THREE.Color("#60a5fa");
-      const dirtyColor = new THREE.Color("#2e1005"); // Deep oil brown
-      materialRef.current.uColor.lerpColors(cleanColor, dirtyColor, stressLevel);
+      materialRef.current.uColor.set(cleanColor);
     }
 
     if (meshRef.current) {
@@ -151,11 +151,11 @@ export default function River() {
       meshRef.current.scale.y = 0.05; // Very flat
       meshRef.current.scale.x = 1.0;
 
-      // Height adjustment relative to terrain
-      // Stress 0 -> y = -1.3 (User High Water)
-      // Stress 1 -> y = -3.3 (Low Water)
-      const waterHeight = 2.4 * (1 - stressLevel);
-      meshRef.current.position.y = -3.3 + waterHeight;
+      // Height: Fixed High Water (-1.3 was user preference for high water)
+      // Or 2.4 * (1 - 0) - 3.3 = 2.4 - 3.3 = -0.9.
+      // Let's stick closer to the 'full' look.
+      // Previous logic: -3.3 + (2.4 * (1-stress)). If stress=0, pos=-0.9.
+      meshRef.current.position.y = -1.2;
     }
   });
 
