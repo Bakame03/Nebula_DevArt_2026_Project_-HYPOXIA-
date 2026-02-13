@@ -72,9 +72,10 @@ export default function Forest() {
       // 2. FOLIAGE
       // Base Color Calculation
       let baseFoliage;
-      if (tree.type < 0.3) baseFoliage = new THREE.Color("#22c55e");
-      else if (tree.type < 0.6) baseFoliage = new THREE.Color("#16a34a");
-      else baseFoliage = new THREE.Color("#15803d");
+      // Natural, lush greens (Reverted from vibrant)
+      if (tree.type < 0.3) baseFoliage = new THREE.Color("#22c55e"); // Green 500
+      else if (tree.type < 0.6) baseFoliage = new THREE.Color("#16a34a"); // Green 600
+      else baseFoliage = new THREE.Color("#15803d"); // Green 700
 
       // RESTORED: No color lerp to dead/black
       tempColor.copy(baseFoliage);

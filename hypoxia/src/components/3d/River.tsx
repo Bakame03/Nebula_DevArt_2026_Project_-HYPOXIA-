@@ -92,7 +92,8 @@ const RiverWaterMaterial = shaderMaterial(
       // Base Mixing
       // uColor (Blue -> Mud) mixed with Black Oil spots
       vec3 oilColor = vec3(0.02, 0.02, 0.02); // Almost black
-      vec3 waterColor = mix(uColor, oilColor, uStress * 0.8); // More stress = more oil
+      // Reduced oil influence for cleaner colors at low stress
+      vec3 waterColor = mix(uColor, oilColor, uStress * 0.8); 
       
       // Fresnel Effect (Shiny surface)
       vec3 viewDir = normalize(vViewPosition);
@@ -104,9 +105,9 @@ const RiverWaterMaterial = shaderMaterial(
       
       vec3 finalColor = mix(waterColor, sheenColor, fresnel * 0.5);
       
-      // Foam (Dirty brown foam)
+      // Foam (Lighter foam)
       float foamThreshold = 0.6 - (uStress * 0.1); 
-      vec3 foamColor = vec3(0.3, 0.25, 0.2); // Dirty foam
+      vec3 foamColor = vec3(0.8, 0.9, 1.0); // White/Blueish foam (cleaner)
       finalColor = mix(finalColor, foamColor, smoothstep(foamThreshold, foamThreshold + 0.1, noiseVal));
 
       gl_FragColor = vec4(finalColor, 0.9);
@@ -141,8 +142,8 @@ export default function River() {
       // Keep stress minimal for visuals (clean water)
       materialRef.current.uStress = 0; // Fixed at 0 for clean look
 
-      // Color: Blue (Fixed)
-      const cleanColor = new THREE.Color("#60a5fa");
+      // Color: Blue Ciel (Sky Blue)
+      const cleanColor = new THREE.Color("#38bdf8"); // Sky Blue 400
       materialRef.current.uColor.set(cleanColor);
     }
 
