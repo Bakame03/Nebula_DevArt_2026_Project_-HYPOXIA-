@@ -151,8 +151,9 @@ export default function River() {
       meshRef.current.scale.y = 0.05; // Very flat
       meshRef.current.scale.x = 1.0;
 
-      // Adjust height to stay on surface
-      // Water level drops with stress
+      // Height adjustment relative to terrain
+      // Stress 0 -> y = -1.3 (User High Water)
+      // Stress 1 -> y = -3.3 (Low Water)
       const waterHeight = 2.4 * (1 - stressLevel);
       meshRef.current.position.y = -3.3 + waterHeight;
     }
