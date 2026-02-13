@@ -3,6 +3,7 @@ import { useStore } from "@/store/useStore";
 import { useRef, useMemo, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useTexture } from "@react-three/drei";
 import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
 import seededRandom from "@/utils/seededRandom";
 
@@ -14,12 +15,31 @@ export default function Forest() {
   const trunkMesh = useRef<THREE.InstancedMesh>(null);
   const foliageMesh = useRef<THREE.InstancedMesh>(null);
 
-  const TREE_COUNT = 200; // Denser forest
-  const FOLIAGE_PER_TREE = 4; // More lush foliage
+  const TREE_COUNT = 200;
+  const FOLIAGE_PER_TREE = 4;
+
+  // ── Load Normal Map Texture ───────────────────────────────────────────
+  const barkNormal = useTexture("/textures/bark_normal.jpg");
+
+  // Configure texture wrapping for trunks
+  useMemo(() => {
+    barkNormal.wrapS = THREE.RepeatWrapping;
+    barkNormal.wrapT = THREE.RepeatWrapping;
+    barkNormal.repeat.set(2, 4); // Repeat vertically for bark grain
+  }, [barkNormal]);
+
+  // ── Reuse same texture with different config for foliage ──────────────
+  const leafNormal = useMemo(() => {
+    const tex = barkNormal.clone();
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1, 1);
+    tex.needsUpdate = true;
+    return tex;
+  }, [barkNormal]);
 
   // Generate valid tree positions
   const trees = useMemo(() => {
-    // Local generator
     const rng = new seededRandom(67890);
     const validTrees = [];
     let attempts = 0;
@@ -50,9 +70,7 @@ export default function Forest() {
   useLayoutEffect(() => {
     if (!trunkMesh.current || !foliageMesh.current) return;
 
-    // Local generator for layout effect
     const rng = new seededRandom(13579);
-
     let foliageIndex = 0;
 
     trees.forEach((tree, i) => {
@@ -63,12 +81,11 @@ export default function Forest() {
       tempObject.updateMatrix();
       trunkMesh.current!.setMatrixAt(i, tempObject.matrix);
 
-      // Trunk Color: Always Brown (#3e2723)
+      // Trunk Color: Always Brown
       const baseTrunk = new THREE.Color("#3e2723");
       trunkMesh.current!.setColorAt(i, baseTrunk);
 
       // 2. FOLIAGE
-      // Base Color - Keeping the FIX: Solid Green, no complex mix
       const baseFoliage = new THREE.Color("#22c55e");
       tempColor.copy(baseFoliage);
 
@@ -105,17 +122,26 @@ export default function Forest() {
 
   return (
     <group>
-      {/* TRUNKS */}
+      {/* TRUNKS — with Bark Normal Map */}
       <instancedMesh ref={trunkMesh} args={[undefined, undefined, trees.length]}>
         <cylinderGeometry args={[0.2, 0.4, 2, 8]} />
-        <meshStandardMaterial color="#3e2723" roughness={0.95} metalness={0.0} envMapIntensity={0.2} />
+        <meshStandardMaterial
+          color="#3e2723"
+          normalMap={barkNormal}
+          normalScale={new THREE.Vector2(0.8, 0.8)}
+          roughness={0.95}
+          metalness={0.0}
+          envMapIntensity={0.2}
+        />
       </instancedMesh>
 
-      {/* FOLIAGE */}
+      {/* FOLIAGE — with Leaf Normal Map for surface detail */}
       <instancedMesh ref={foliageMesh} args={[undefined, undefined, trees.length * FOLIAGE_PER_TREE]}>
         <coneGeometry args={[1.2, 2.5, 6]} />
         <meshStandardMaterial
           color="#22c55e"
+          normalMap={leafNormal}
+          normalScale={new THREE.Vector2(0.3, 0.3)}
           roughness={0.7}
           metalness={0.0}
           envMapIntensity={0.5}

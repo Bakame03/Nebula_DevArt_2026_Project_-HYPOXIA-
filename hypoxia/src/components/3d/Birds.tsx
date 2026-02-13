@@ -3,6 +3,7 @@ import { useStore } from "@/store/useStore";
 import { useRef, useMemo, useLayoutEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
 import seededRandom from "@/utils/seededRandom";
 
 const tempObject = new THREE.Object3D();
@@ -59,6 +60,15 @@ export default function Birds() {
 
     // Geometry
     const birdGeometry = useMemo(() => createManualBirdGeo(), []);
+
+    // ── Load Normal Map Texture ─────────────────────────────────────
+    const birdNormal = useTexture("/textures/bark_normal.jpg");
+
+    useMemo(() => {
+        birdNormal.wrapS = THREE.RepeatWrapping;
+        birdNormal.wrapT = THREE.RepeatWrapping;
+        birdNormal.repeat.set(1, 1);
+    }, [birdNormal]);
 
     // --- Sky Birds Logic (Flock) ---
     const skyBirdsData = useMemo(() => {
@@ -121,9 +131,15 @@ export default function Birds() {
 
     return (
         <group>
-            {/* SKY BIRDS - Dark Grey */}
+            {/* SKY BIRDS - Dark Grey with Normal Map */}
             <instancedMesh ref={skyBirdsMesh} args={[undefined, undefined, SKY_BIRD_COUNT]} geometry={birdGeometry}>
-                <meshStandardMaterial color="#333" roughness={0.6} side={THREE.DoubleSide} />
+                <meshStandardMaterial
+                    color="#333"
+                    normalMap={birdNormal}
+                    normalScale={new THREE.Vector2(0.4, 0.4)}
+                    roughness={0.6}
+                    side={THREE.DoubleSide}
+                />
             </instancedMesh>
         </group>
     );

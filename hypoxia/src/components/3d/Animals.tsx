@@ -3,6 +3,7 @@ import { useStore } from "@/store/useStore";
 import { useRef, useMemo, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useTexture } from "@react-three/drei";
 import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
 import seededRandom from "@/utils/seededRandom";
 
@@ -95,10 +96,19 @@ export default function Animals() {
     const { stressLevel } = useStore();
     const meshRef = useRef<THREE.InstancedMesh>(null);
 
-    const ANIMAL_COUNT = 30; // Fewer animals since they are more complex
+    const ANIMAL_COUNT = 30;
 
     // Create geometry once
     const deerGeometry = useMemo(() => createDeerGeometry(), []);
+
+    // ── Load Normal Map Texture ─────────────────────────────────────
+    const animalNormal = useTexture("/textures/bark_normal.jpg");
+
+    useMemo(() => {
+        animalNormal.wrapS = THREE.RepeatWrapping;
+        animalNormal.wrapT = THREE.RepeatWrapping;
+        animalNormal.repeat.set(2, 2);
+    }, [animalNormal]);
 
     // Generate valid animal positions
     const animals = useMemo(() => {
@@ -188,6 +198,8 @@ export default function Animals() {
             {/* Use our Generated Geometry */}
             <primitive object={deerGeometry} attach="geometry" />
             <meshStandardMaterial
+                normalMap={animalNormal}
+                normalScale={new THREE.Vector2(0.6, 0.6)}
                 roughness={0.8}
                 metalness={0.0}
                 envMapIntensity={0.5}
