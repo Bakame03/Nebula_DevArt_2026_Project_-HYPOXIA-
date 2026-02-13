@@ -215,7 +215,7 @@ export default function SoundManager() {
       loop: true,
       volume: 0,
       rate: 0.8,
-      html5: true,
+      html5: false,
       preload: true,
     });
 
@@ -224,7 +224,7 @@ export default function SoundManager() {
       src: ['/sounds/BANK_Alerte.mp3'],
       loop: true,
       volume: 0,
-      html5: true,
+      html5: false,
       preload: true,
     });
 
@@ -232,6 +232,9 @@ export default function SoundManager() {
 
     // Démarrage au premier clic/touche
     const handleInteraction = () => {
+      if (Howler.ctx && Howler.ctx.state === 'suspended') {
+        Howler.ctx.resume();
+      }
       initAudio();
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
