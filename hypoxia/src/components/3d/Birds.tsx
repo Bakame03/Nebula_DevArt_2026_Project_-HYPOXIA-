@@ -78,38 +78,45 @@ export default function Birds() {
     }, []);
 
     useFrame((state) => {
+        if (!skyBirdsMesh.current) return;
+
         const time = state.clock.getElapsedTime();
-        const birdScale = Math.max(0, 1 - stressLevel * 1.5);
+        // Base uniform scale for all birds (shrinks them slightly with stress)
+        // const birdScale = Math.max(0, 1 - stressLevel * 1.5); 
+        // Better: Keep size constant, just hide them count-wise
+        const birdScale = 1.0;
 
-        // Sky Birds
-        if (skyBirdsMesh.current) {
-            // Disappear one by one based on Stress Level
-            // High Stress -> Low Count
-            const visibleCount = Math.floor(SKY_BIRD_COUNT * (1 - stressLevel));
-            skyBirdsMesh.current.count = Math.max(0, visibleCount);
+        // Disappear one by one based on Stress Level
+        const visibleCount = Math.floor(SKY_BIRD_COUNT * (1 - stressLevel));
 
-            skyBirdsData.forEach((bird, i) => {
-                const radius = 40 + Math.sin(time * 0.2 + bird.offset) * 10;
-                const angle = time * bird.speed * 0.2 + bird.offset;
+        skyBirdsData.forEach((bird, i) => {
+            const radius = 40 + Math.sin(time * 0.2 + bird.offset) * 10;
+            const angle = time * bird.speed * 0.2 + bird.offset;
 
-                const curX = Math.cos(angle) * radius;
-                const curZ = Math.sin(angle) * radius;
-                const curY = bird.startY + Math.sin(time + bird.offset) * 2;
+            const curX = Math.cos(angle) * radius;
+            const curZ = Math.sin(angle) * radius;
+            const curY = bird.startY + Math.sin(time + bird.offset) * 2;
 
-                tempObject.position.set(curX, curY, curZ);
+            tempObject.position.set(curX, curY, curZ);
 
-                const targetX = Math.cos(angle + 0.1) * radius;
-                const targetZ = Math.sin(angle + 0.1) * radius;
-                tempObject.lookAt(targetX, curY, targetZ);
+            const targetX = Math.cos(angle + 0.1) * radius;
+            const targetZ = Math.sin(angle + 0.1) * radius;
+            tempObject.lookAt(targetX, curY, targetZ);
 
-                tempObject.rotateZ(-0.5); // Bank left
+            tempObject.rotateZ(-0.5); // Bank left
 
+            // Visibility Logic
+            if (i >= visibleCount) {
+                tempObject.scale.set(0, 0, 0);
+            } else {
                 tempObject.scale.set(birdScale, birdScale, birdScale);
-                tempObject.updateMatrix();
-                skyBirdsMesh.current!.setMatrixAt(i, tempObject.matrix);
-            });
-            skyBirdsMesh.current.instanceMatrix.needsUpdate = true;
-        }
+            }
+
+            tempObject.updateMatrix();
+            skyBirdsMesh.current!.setMatrixAt(i, tempObject.matrix);
+        });
+
+        skyBirdsMesh.current.instanceMatrix.needsUpdate = true;
     });
 
     return (

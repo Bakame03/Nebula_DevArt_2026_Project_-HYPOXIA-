@@ -133,66 +133,54 @@ export default function Animals() {
         return validAnimals;
     }, []);
 
-    // Animate Deer (Idle / Grazing Simulation)
+    // React to stress updates efficiently
     useFrame((state) => {
         if (!meshRef.current) return;
 
         const time = state.clock.getElapsedTime();
-        const visibleCount = meshRef.current.count;
+        const animalCount = animals.length;
 
-        for (let i = 0; i < visibleCount; i++) {
+        // Disappearance Logic:
+        // Calculate how many should be visible
+        const visibleRatio = Math.max(0, 1 - stressLevel * 1.2); // Fully gone by 0.8 stress
+        const visibleMaxIndex = Math.floor(animalCount * visibleRatio);
+
+        // Update Colors
+        const baseColor = new THREE.Color("#8d6e63");
+        // Darken slightly with stress
+        const sickColor = new THREE.Color("#4e342e");
+        const currentColor = baseColor.clone().lerp(sickColor, stressLevel * 0.5);
+
+        for (let i = 0; i < animalCount; i++) {
             const animal = animals[i];
 
-            // Idle Animation: Slight vertical breathing/bob
-            // We don't want them defining gravity (floating), just subtle
-            const breathe = Math.sin(time * 2 + animal.phase) * 0.02;
+            // Visibility Check
+            if (i >= visibleMaxIndex) {
+                // Hide by scaling to 0
+                tempObject.scale.set(0, 0, 0);
+            } else {
+                // Animate Visible Animals
+                const breathe = Math.sin(time * 2 + animal.phase) * 0.02;
+                tempObject.position.set(animal.x, animal.y + breathe, animal.z);
+                tempObject.scale.set(animal.scale, animal.scale, animal.scale);
+                tempObject.rotation.set(0, animal.rotationY, 0);
 
-            // Position: Stick to ground + breathe
-            tempObject.position.set(animal.x, animal.y + breathe, animal.z);
-            tempObject.scale.set(animal.scale, animal.scale, animal.scale);
+                // Grazing/Idle tilt
+                const tilt = Math.sin(time * 0.5 + animal.phase) * 0.05;
+                tempObject.rotation.x = tilt;
 
-            // Rotation: Look around slowly? For performance, static rotation is safer for InstancedMesh unless we update matrix 60fps
-            // Let's just update rotation to maintain their initial facing direction
-            tempObject.rotation.set(0, animal.rotationY, 0);
-
-            // Grazing simulation (head bob): requires skeletal mesh or separate head matrix, 
-            // but we have merged geometry. So we can only rotate the WHOLE body.
-            // Let's create a "grazing" tilt for some? 
-            // For now, simpler is better: slight tilt forward/back
-            const tilt = Math.sin(time * 0.5 + animal.phase) * 0.05;
-            tempObject.rotation.x = tilt;
+                // Update Color
+                meshRef.current.setColorAt(i, currentColor);
+            }
 
             tempObject.updateMatrix();
             meshRef.current.setMatrixAt(i, tempObject.matrix);
         }
+
         meshRef.current.instanceMatrix.needsUpdate = true;
-    });
-
-    // Handle Disappearance based on Stress
-    useLayoutEffect(() => {
-        if (!meshRef.current) return;
-
-        // Disappearance Logic:
-        const visibleRatio = 1 - stressLevel;
-        const keptAnimals = Math.floor(animals.length * Math.max(0, visibleRatio));
-
-        meshRef.current.count = keptAnimals;
-
-        // Update Colors
-        // Realistic Deer Color (Brown/Tan)
-        const baseColor = new THREE.Color("#8d6e63");
-
-        // Optional: Make them look "sick" or darker with stress?
-        // Let's darken them slightly as stress rises to match the burnt forest theme
-        const sickColor = new THREE.Color("#3e2723"); // Darker brown
-        const currentColor = baseColor.clone().lerp(sickColor, stressLevel);
-
-        for (let i = 0; i < keptAnimals; i++) {
-            meshRef.current.setColorAt(i, currentColor);
-        }
         if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
 
-    }, [animals, stressLevel]);
+    });
 
     return (
         <instancedMesh ref={meshRef} args={[undefined, undefined, animals.length]}>

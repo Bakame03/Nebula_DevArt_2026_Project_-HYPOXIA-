@@ -152,11 +152,11 @@ export default function River() {
       meshRef.current.scale.y = 0.05; // Very flat
       meshRef.current.scale.x = 1.0;
 
-      // Height: Fixed High Water (-1.3 was user preference for high water)
-      // Or 2.4 * (1 - 0) - 3.3 = 2.4 - 3.3 = -0.9.
-      // Let's stick closer to the 'full' look.
-      // Previous logic: -3.3 + (2.4 * (1-stress)). If stress=0, pos=-0.9.
-      meshRef.current.position.y = -1.2;
+      // Height: Reacts to stress again
+      // Stress 0 -> -1.2 (High Water)
+      // Stress 1 -> -3.7 (Low Water)
+      const waterLevel = -1.2 - (stressLevel * 2.5);
+      meshRef.current.position.y = waterLevel;
     }
   });
 
