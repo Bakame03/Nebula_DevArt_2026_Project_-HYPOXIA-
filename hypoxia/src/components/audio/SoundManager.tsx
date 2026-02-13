@@ -6,11 +6,11 @@ import { useStore } from '@/store/useStore';
 // ============================================================
 // 🫁 SoundManager — L'Angoisse Sonore d'HYPOXIA
 // ============================================================
-// 4 couches sonores : FLEUVE + OISEAUX → CŒUR + DRONE
+// 3 couches sonores : FLEUVE → CŒUR + DRONE
 //
-// Stress 0.0-0.1 : 🌊🐦 Fleuve vivant + oiseaux chantent
-// Stress 0.1-0.4 : 🟡 Cœur apparaît doucement, fleuve/oiseaux s'atténuent
-// Stress 0.4-0.7 : 🔴 Fleuve étouffé, oiseaux meurent, cœur s'emballe
+// Stress 0.0-0.1 : 🌊 Fleuve vivant
+// Stress 0.1-0.4 : 🟡 Cœur apparaît doucement, fleuve s'atténue
+// Stress 0.4-0.7 : 🔴 Fleuve étouffé, cœur s'emballe
 // Stress 0.7-1.0 : 💀 Silence mortel, tachycardie extrême
 // ============================================================
 
@@ -29,7 +29,6 @@ export default function SoundManager() {
 
   // ─── Refs pour les instances Howl ─────────────────────────
   const riverRef = useRef<Howl | null>(null);      // 🌊 Fleuve
-  const birdsRef = useRef<Howl | null>(null);      // 🐦 Oiseaux
   const heartRef = useRef<Howl | null>(null);      // 💓 Battement de cœur
 
   // ─── Refs pour le filtre passe-bas sur le fleuve ──────────
@@ -46,7 +45,6 @@ export default function SoundManager() {
   // ─── Valeurs lerpées pour transitions douces ──────────────
   const currentRiverVol = useRef(0.7);       // Fleuve fort
   const currentRiverFilter = useRef(2200);   // Filtre ouvert (Hz)
-  const currentBirdsVol = useRef(0.5);       // Oiseaux audibles
   const currentHeartVol = useRef(0.0);       // Cœur muet
   const currentHeartRate = useRef(0.6);      // Rate lent
 
@@ -96,11 +94,7 @@ export default function SoundManager() {
       riverRef.current.play();
     }
 
-    // 🐦 Lancer les oiseaux
-    if (birdsRef.current) {
-      birdsRef.current.volume(0.5);
-      birdsRef.current.play();
-    }
+
 
 
 
@@ -173,26 +167,7 @@ export default function SoundManager() {
         riverFilterRef.current.frequency.value = currentRiverFilter.current;
       }
 
-      // ════════════════════════════════════════════════════════
-      // 🐦 COUCHE 2 : OISEAUX (disparaissent TOTALEMENT très vite)
-      // ════════════════════════════════════════════════════════
-      // Volume : 0.5 → 0.0 (Silence complet dès 0.20 de stress / 40 caractères)
-      // Cela évite le fameux "cri de coq" qui semble être dans ce fichier
-      let birdsVolTarget = clamp(0.5 * (1 - stress * 5.0), 0, 0.5);
-      if (stress > 0.2) birdsVolTarget = 0; // Sécurité : Silence absolu après 40 chars
 
-      currentBirdsVol.current = lerp(currentBirdsVol.current, birdsVolTarget, lerpSpeed);
-
-      if (birdsRef.current) {
-        birdsRef.current.volume(currentBirdsVol.current);
-        // Si volume quasi nul, on mute/pause pour éviter tout glitch
-        if (currentBirdsVol.current < 0.01) {
-          birdsRef.current.mute(true);
-        } else {
-          birdsRef.current.mute(false);
-          birdsRef.current.rate(clamp(1.0 - stress * 0.4, 0.6, 1.0));
-        }
-      }
 
 
 
@@ -234,8 +209,7 @@ export default function SoundManager() {
         lfoGainRef.current.gain.value = droneStress * 0.1;
       }
 
-      // DEBUG Logs (temporaire pour vérifier)
-      // console.log(`Stress: ${stress.toFixed(2)} | BirdsVol: ${currentBirdsVol.current.toFixed(2)} | HeartVol: ${currentHeartVol.current.toFixed(2)}`);
+
 
       rafRef.current = requestAnimationFrame(update);
     };
@@ -255,15 +229,7 @@ export default function SoundManager() {
       preload: true,
     });
 
-    // 🐦 Oiseaux de forêt (disparaissent avec le stress)
-    birdsRef.current = new Howl({
-      src: ['/sounds/birds.wav'],
-      loop: true,
-      volume: 0.5,
-      rate: 1.0,
-      html5: true,
-      preload: true,
-    });
+
 
 
 
@@ -300,7 +266,6 @@ export default function SoundManager() {
       window.removeEventListener('touchstart', handleInteraction);
 
       riverRef.current?.unload();
-      birdsRef.current?.unload();
       heartRef.current?.unload();
 
       try {
