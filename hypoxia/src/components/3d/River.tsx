@@ -36,7 +36,7 @@ export default function River() {
   // ── Animation Loop ────────────────────────────────────────────────────
   useFrame((_, delta) => {
     // 1. Animate texture offset → flowing water illusion
-    waterNormals.offset.x += delta * 0.5;
+    waterNormals.offset.x += delta * 0.10;
 
     // 2. Update material color based on stress
     if (materialRef.current) {

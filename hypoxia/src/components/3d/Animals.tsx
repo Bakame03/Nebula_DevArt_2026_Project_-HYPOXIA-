@@ -1,96 +1,13 @@
 "use client";
 import { useStore } from "@/store/useStore";
-import { useRef, useMemo, useLayoutEffect } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
 import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
 import seededRandom from "@/utils/seededRandom";
 
-
 const tempObject = new THREE.Object3D();
-const tempColor = new THREE.Color();
-
-// Procedurally generate a Low Poly Deer Geometry
-const createDeerGeometry = () => {
-    const geometries: THREE.BufferGeometry[] = [];
-
-    // Helper to add a box part
-    const addPart = (w: number, h: number, d: number, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) => {
-        const geo = new THREE.BoxGeometry(w, h, d);
-        geo.rotateX(rx);
-        geo.rotateY(ry);
-        geo.rotateZ(rz);
-        geo.translate(x, y, z);
-        geometries.push(geo);
-    };
-
-    // Body
-    addPart(0.6, 0.6, 1.2, 0, 1.3, 0);
-
-    // Neck
-    addPart(0.25, 0.8, 0.25, 0, 2.0, 0.5, -Math.PI / 8);
-
-    // Head
-    addPart(0.3, 0.35, 0.5, 0, 2.5, 0.8);
-
-    // Legs (Front-Left, Front-Right, Back-Left, Back-Right)
-    const legW = 0.12;
-    const legH = 1.0;
-    addPart(legW, legH, legW, -0.2, 0.5, 0.4);
-    addPart(legW, legH, legW, 0.2, 0.5, 0.4);
-    addPart(legW, legH, legW, -0.2, 0.5, -0.4);
-    addPart(legW, legH, legW, 0.2, 0.5, -0.4);
-
-    // Antlers (Simple branches)
-    addPart(0.05, 0.4, 0.05, -0.1, 2.8, 0.7, 0, 0, 0.5);
-    addPart(0.05, 0.4, 0.05, 0.1, 2.8, 0.7, 0, 0, -0.5);
-
-    // Tail
-    addPart(0.1, 0.2, 0.1, 0, 1.5, -0.6, 0.5);
-
-    // Merge all parts
-    if (geometries.length === 0) return new THREE.BoxGeometry(1, 1, 1);
-
-    // Manual Merge Implementation to avoid 'three-stdlib' import issues
-    const merged = new THREE.BufferGeometry();
-    const pos: number[] = [];
-    const norm: number[] = [];
-    const uvs: number[] = [];
-    const indices: number[] = [];
-    let vertexOffset = 0;
-
-    geometries.forEach(geo => {
-        // Ensure standard attributes exist
-        if (!geo.attributes.position) return;
-
-        const p = geo.attributes.position;
-        const n = geo.attributes.normal;
-        const u = geo.attributes.uv;
-        const ind = geo.index;
-
-        for (let i = 0; i < p.count; i++) {
-            pos.push(p.getX(i), p.getY(i), p.getZ(i));
-            if (n) norm.push(n.getX(i), n.getY(i), n.getZ(i));
-            if (u) uvs.push(u.getX(i), u.getY(i));
-        }
-
-        if (ind) {
-            for (let i = 0; i < ind.count; i++) {
-                indices.push(ind.getX(i) + vertexOffset);
-            }
-        }
-        vertexOffset += p.count;
-    });
-
-    merged.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    if (norm.length > 0) merged.setAttribute('normal', new THREE.Float32BufferAttribute(norm, 3));
-    if (uvs.length > 0) merged.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    if (indices.length > 0) merged.setIndex(indices);
-
-    merged.computeVertexNormals(); // Ensure normals are computed for lighting
-    return merged;
-};
 
 export default function Animals() {
     const { stressLevel } = useStore();
@@ -98,23 +15,18 @@ export default function Animals() {
 
     const ANIMAL_COUNT = 30;
 
-    // Create geometry once
-    const deerGeometry = useMemo(() => createDeerGeometry(), []);
+    // ── Load Deer Sprite ──────────────────────────────────────────────
+    const deerTexture = useTexture("/textures/deer_sprite.png");
 
-    // ── Load Normal Map Texture ─────────────────────────────────────
-    const animalNormal = useTexture("/textures/bark_normal.jpg");
+    // ── Billboard PlaneGeometry (wider than tall for deer) ─────────────
+    const deerPlane = useMemo(() => {
+        // Deer proportions: wider than tall
+        return new THREE.PlaneGeometry(3, 2.2);
+    }, []);
 
-    useMemo(() => {
-        animalNormal.wrapS = THREE.RepeatWrapping;
-        animalNormal.wrapT = THREE.RepeatWrapping;
-        animalNormal.repeat.set(2, 2);
-    }, [animalNormal]);
-
-    // Generate valid animal positions
+    // ── Generate valid animal positions ────────────────────────────────
     const animals = useMemo(() => {
-        // Local generator
         const rng = new seededRandom(998877);
-
         const validAnimals = [];
         let attempts = 0;
 
@@ -130,79 +42,70 @@ export default function Animals() {
                 if (dist < minDist) minDist = dist;
             }
 
-            // Avoid river (keep them on land)
-            if (minDist > 8) { // Keep them further from water edge
+            if (minDist > 8) {
                 const y = getTerrainHeight(x, z);
                 const scale = 0.8 + rng.next() * 0.4;
-                const rotationY = rng.next() * Math.PI * 2;
-                // Random phase for idle animation
                 const phase = rng.next() * Math.PI * 2;
-                validAnimals.push({ x, y, z, scale, rotationY, phase });
+                validAnimals.push({ x, y, z, scale, phase });
             }
         }
         return validAnimals;
     }, []);
 
-    // React to stress updates efficiently
+    // ── Every frame: billboard facing camera + animations ─────────────
     useFrame((state) => {
         if (!meshRef.current) return;
 
         const time = state.clock.getElapsedTime();
-        const animalCount = animals.length;
+        const camera = state.camera;
 
-        // Disappearance Logic:
-        // Calculate how many should be visible
-        // Synchronized: 1.0 means fully visible at 0 stress, 0 at 1 stress
+        // Disappearance based on stress
         const visibleRatio = Math.max(0, 1 - stressLevel);
-        const visibleMaxIndex = Math.floor(animalCount * visibleRatio);
+        const visibleMaxIndex = Math.floor(animals.length * visibleRatio);
 
-        // Update Colors
-        const baseColor = new THREE.Color("#8d6e63");
-        // Darken slightly with stress
-        const sickColor = new THREE.Color("#4e342e");
-        const currentColor = baseColor.clone().lerp(sickColor, stressLevel * 0.5);
-
-        for (let i = 0; i < animalCount; i++) {
-            const animal = animals[i];
-
-            // Visibility Check
+        animals.forEach((animal, i) => {
             if (i >= visibleMaxIndex) {
                 // Hide by scaling to 0
                 tempObject.scale.set(0, 0, 0);
             } else {
-                // Animate Visible Animals
+                // Breathing animation
                 const breathe = Math.sin(time * 2 + animal.phase) * 0.02;
-                tempObject.position.set(animal.x, animal.y + breathe, animal.z);
+
+                // Position: offset Y by half height so base is on ground
+                tempObject.position.set(
+                    animal.x,
+                    animal.y + (1.1 * animal.scale) + breathe,
+                    animal.z
+                );
+
+                // Billboard: face camera (Y-axis only)
+                const dx = camera.position.x - animal.x;
+                const dz = camera.position.z - animal.z;
+                const angle = Math.atan2(dx, dz);
+                tempObject.rotation.set(0, angle, 0);
+
+                // Scale
                 tempObject.scale.set(animal.scale, animal.scale, animal.scale);
-                tempObject.rotation.set(0, animal.rotationY, 0);
-
-                // Grazing/Idle tilt
-                const tilt = Math.sin(time * 0.5 + animal.phase) * 0.05;
-                tempObject.rotation.x = tilt;
-
-                // Update Color
-                meshRef.current.setColorAt(i, currentColor);
             }
 
             tempObject.updateMatrix();
-            meshRef.current.setMatrixAt(i, tempObject.matrix);
-        }
+            meshRef.current!.setMatrixAt(i, tempObject.matrix);
+        });
 
         meshRef.current.instanceMatrix.needsUpdate = true;
-        if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
-
     });
 
     return (
-        <instancedMesh ref={meshRef} args={[undefined, undefined, animals.length]}>
-            {/* Use our Generated Geometry */}
-            <primitive object={deerGeometry} attach="geometry" />
+        <instancedMesh ref={meshRef} args={[deerPlane, undefined, animals.length]}>
             <meshStandardMaterial
-                normalMap={animalNormal}
-                normalScale={new THREE.Vector2(0.6, 0.6)}
+                map={deerTexture}
+                alphaTest={0.5}
+                transparent
+                side={THREE.DoubleSide}
                 roughness={0.8}
                 metalness={0.0}
                 envMapIntensity={0.5}
+                depthWrite={true}
             />
         </instancedMesh>
     );
