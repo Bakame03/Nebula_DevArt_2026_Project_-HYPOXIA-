@@ -142,7 +142,8 @@ export default function Animals() {
 
         // Disappearance Logic:
         // Calculate how many should be visible
-        const visibleRatio = Math.max(0, 1 - stressLevel * 1.2); // Fully gone by 0.8 stress
+        // Synchronized: 1.0 means fully visible at 0 stress, 0 at 1 stress
+        const visibleRatio = Math.max(0, 1 - stressLevel);
         const visibleMaxIndex = Math.floor(animalCount * visibleRatio);
 
         // Update Colors
