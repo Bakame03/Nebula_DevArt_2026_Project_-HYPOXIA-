@@ -1,6 +1,7 @@
 "use client";
 import { useStore } from "@/store/useStore";
 import { useRef, useMemo, useLayoutEffect } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
 import seededRandom from "@/utils/seededRandom";
@@ -9,7 +10,7 @@ const tempObject = new THREE.Object3D();
 const tempColor = new THREE.Color();
 
 export default function Forest() {
-  const { stressLevel, permanentDamage } = useStore();
+  const { stressLevel } = useStore();
   const trunkMesh = useRef<THREE.InstancedMesh>(null);
   const foliageMesh = useRef<THREE.InstancedMesh>(null);
 
@@ -52,9 +53,6 @@ export default function Forest() {
     // Local generator for layout effect
     const rng = new seededRandom(13579);
 
-    // RESTORED: No burn level, always healthy
-    // const burnLevel = Math.min(stressLevel + permanentDamage, 1);
-
     let foliageIndex = 0;
 
     trees.forEach((tree, i) => {
@@ -70,14 +68,8 @@ export default function Forest() {
       trunkMesh.current!.setColorAt(i, baseTrunk);
 
       // 2. FOLIAGE
-      // Base Color Calculation
-      let baseFoliage;
-      // Natural, lush greens (Reverted from vibrant)
-      if (tree.type < 0.3) baseFoliage = new THREE.Color("#22c55e"); // Green 500
-      else if (tree.type < 0.6) baseFoliage = new THREE.Color("#16a34a"); // Green 600
-      else baseFoliage = new THREE.Color("#15803d"); // Green 700
-
-      // RESTORED: No color lerp to dead/black
+      // Base Color - Keeping the FIX: Solid Green, no complex mix
+      const baseFoliage = new THREE.Color("#22c55e");
       tempColor.copy(baseFoliage);
 
       for (let f = 0; f < FOLIAGE_PER_TREE; f++) {
@@ -91,7 +83,6 @@ export default function Forest() {
           tree.z + zOffset
         );
 
-        // RESTORED: No shedding factor
         const fScale = tree.scale * (0.8 + rng.next() * 0.7);
 
         tempObject.scale.set(fScale, fScale, fScale);
@@ -110,8 +101,7 @@ export default function Forest() {
     foliageMesh.current.instanceMatrix.needsUpdate = true;
     if (foliageMesh.current.instanceColor) foliageMesh.current.instanceColor.needsUpdate = true;
 
-  }, [trees]); // Removed stress dependencies for visual stability
-
+  }, [trees]);
 
   return (
     <group>
@@ -124,7 +114,12 @@ export default function Forest() {
       {/* FOLIAGE */}
       <instancedMesh ref={foliageMesh} args={[undefined, undefined, trees.length * FOLIAGE_PER_TREE]}>
         <coneGeometry args={[1.2, 2.5, 6]} />
-        <meshStandardMaterial roughness={0.7} metalness={0.0} envMapIntensity={0.5} vertexColors={true} />
+        <meshStandardMaterial
+          color="#22c55e"
+          roughness={0.7}
+          metalness={0.0}
+          envMapIntensity={0.5}
+        />
       </instancedMesh>
     </group>
   );
