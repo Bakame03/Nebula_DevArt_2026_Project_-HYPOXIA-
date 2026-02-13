@@ -6,9 +6,11 @@ import { useStore } from '@/store/useStore';
 // ============================================================
 // 🫁 SoundManager — L'Angoisse Sonore d'HYPOXIA
 // ============================================================
-// 🔇 DEBUG : Phase 4 - RIVIÈRE + OISEAUX + NOUVEAU CŒUR LOURD
+// 🔇 DEBUG : Phase 5 - RIVIÈRE + OISEAUX + CŒUR LOURD + ALERTE PRISON
 // Stress 0.0-1.0 : Rivière et Oiseaux diminuent.
-// Stress 0.1-1.0 : Cœur Lourd augmente (Boum Boum).
+// Stress 0.1-1.0 : Cœur Lourd augmente.
+// Stress 1.0 : ALERTE PRISON (Fin de zone).
+
 // ============================================================
 
 /** Interpolation douce entre deux valeurs */
@@ -27,7 +29,9 @@ export default function SoundManager() {
   // ─── Refs pour les instances Howl ─────────────────────────
   const riverRef = useRef<Howl | null>(null);      // 🌊 Fleuve
   const birdsRef = useRef<Howl | null>(null);      // 🐦 Oiseaux
-  const heartRef = useRef<Howl | null>(null);      // 💓 Cœur Lourd (Nouveau)
+  const heartRef = useRef<Howl | null>(null);      // 💓 Cœur Lourd
+  const alertRef = useRef<Howl | null>(null);      // 🚨 Alerte Prison (BANK_Alerte)
+
 
   // ─── Refs pour le filtre passe-bas sur le fleuve ──────────
   const riverFilterRef = useRef<BiquadFilterNode | null>(null);
@@ -38,7 +42,9 @@ export default function SoundManager() {
   const currentRiverFilter = useRef(2200);   // Filtre ouvert (Hz)
   const currentBirdsVol = useRef(0.5);       // Oiseaux audibles
   const currentHeartVol = useRef(0.0);       // Cœur muet
-  const currentHeartRate = useRef(0.8);      // Rate lourd (plus lent au début)
+  const currentHeartRate = useRef(0.8);      // Rate lourd
+  const currentAlertVol = useRef(0.0);       // Alerte muette
+
 
   const rafRef = useRef<number | null>(null);
   const stressRef = useRef(stressLevel);
@@ -91,11 +97,19 @@ export default function SoundManager() {
       birdsRef.current.play();
     }
 
-    // 💓 Lancer le nouveau cœur (muet au début)
+    // 💓 Lancer le cœur
     if (heartRef.current) {
       heartRef.current.volume(0);
       heartRef.current.play();
     }
+
+    // 🚨 Lancer l'alerte (muette)
+    if (alertRef.current) {
+      alertRef.current.volume(0);
+      alertRef.current.play();
+    }
+
+
 
     startUpdateLoop();
   }, []);
@@ -137,14 +151,10 @@ export default function SoundManager() {
       }
 
       // ════════════════════════════════════════════════════════
-      // 💓 COUCHE 3 : NOUVEAU CŒUR LOURD (Phase 4)
+      // 💓 COUCHE 3 : CŒUR LOURD (Phase 4)
       // ════════════════════════════════════════════════════════
-      // Apparaît dès 0.1 de stress.
-      // Monte en puissance de manière très lourde.
-      const heartStress = clamp((stress - 0.1) / 0.9, 0, 1); // 0 à 1
-      const heartVolTarget = heartStress * heartStress * 1.0; // Courbe exponentielle
-
-      // Rate : 0.8 (lourd) -> 1.5 (rapide mais pas ridicule)
+      const heartStress = clamp((stress - 0.1) / 0.9, 0, 1);
+      const heartVolTarget = heartStress * heartStress * 1.0;
       const heartRateTarget = 0.8 + heartStress * 0.7;
 
       currentHeartVol.current = lerp(currentHeartVol.current, heartVolTarget, lerpSpeed);
@@ -154,6 +164,22 @@ export default function SoundManager() {
         heartRef.current.volume(currentHeartVol.current);
         heartRef.current.rate(currentHeartRate.current);
       }
+
+      // ════════════════════════════════════════════════════════
+      // 🚨 COUCHE 4 : ALERTE PRISON (Phase 5 : Fin de zone)
+      // ════════════════════════════════════════════════════════
+      // Apparaît uniquement à 100% de stress (fin de la jauge).
+      // C'est le signal que la limite est atteinte.
+      const alertStress = (stress >= 1.0) ? 1.0 : 0.0;
+      const alertVolTarget = alertStress * 0.8; // Max 0.8 pour ne pas exploser les oreilles
+
+      currentAlertVol.current = lerp(currentAlertVol.current, alertVolTarget, lerpSpeed * 2); // Transition rapide
+
+      if (alertRef.current) {
+        alertRef.current.volume(currentAlertVol.current);
+      }
+
+
 
       rafRef.current = requestAnimationFrame(update);
     };
@@ -183,15 +209,26 @@ export default function SoundManager() {
       preload: true,
     });
 
-    // 💓 Nouveau Cœur (Lourd)
+    // 💓 Cœur Lourd
     heartRef.current = new Howl({
-      src: ['/sounds/heartbeat_heavy.mp3'], // Nouveau fichier
+      src: ['/sounds/heartbeat_heavy.mp3'],
       loop: true,
       volume: 0,
       rate: 0.8,
       html5: true,
       preload: true,
     });
+
+    // 🚨 Alerte Prison (BANK_Alerte)
+    alertRef.current = new Howl({
+      src: ['/sounds/BANK_Alerte.mp3'],
+      loop: true,
+      volume: 0,
+      html5: true,
+      preload: true,
+    });
+
+
 
     // Démarrage au premier clic/touche
     const handleInteraction = () => {
@@ -205,7 +242,7 @@ export default function SoundManager() {
     window.addEventListener('keydown', handleInteraction);
     window.addEventListener('touchstart', handleInteraction);
 
-    // TENTATIVE D'AUTO-PLAY (Si le navigateur le permet)
+    // TENTATIVE D'AUTO-PLAY
     initAudio();
 
     // ─── Cleanup propre ───
@@ -221,6 +258,8 @@ export default function SoundManager() {
       riverRef.current?.unload();
       birdsRef.current?.unload();
       heartRef.current?.unload();
+      alertRef.current?.unload();
+
 
       audioStarted.current = false;
     };
