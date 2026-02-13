@@ -6,12 +6,9 @@ import { useStore } from '@/store/useStore';
 // ============================================================
 // 🫁 SoundManager — L'Angoisse Sonore d'HYPOXIA
 // ============================================================
-// 3 couches sonores : FLEUVE → CŒUR + DRONE
-//
-// Stress 0.0-0.1 : 🌊 Fleuve vivant
-// Stress 0.1-0.4 : 🟡 Cœur apparaît doucement, fleuve s'atténue
-// Stress 0.4-0.7 : 🔴 Fleuve étouffé, cœur s'emballe
-// Stress 0.7-1.0 : 💀 Silence mortel, tachycardie extrême
+// 🔇 DEBUG : Phase 4 - RIVIÈRE + OISEAUX + NOUVEAU CŒUR LOURD
+// Stress 0.0-1.0 : Rivière et Oiseaux diminuent.
+// Stress 0.1-1.0 : Cœur Lourd augmente (Boum Boum).
 // ============================================================
 
 /** Interpolation douce entre deux valeurs */
@@ -29,26 +26,19 @@ export default function SoundManager() {
 
   // ─── Refs pour les instances Howl ─────────────────────────
   const riverRef = useRef<Howl | null>(null);      // 🌊 Fleuve
-  const heartRef = useRef<Howl | null>(null);      // 💓 Battement de cœur
+  const birdsRef = useRef<Howl | null>(null);      // 🐦 Oiseaux
+  const heartRef = useRef<Howl | null>(null);      // 💓 Cœur Lourd (Nouveau)
 
   // ─── Refs pour le filtre passe-bas sur le fleuve ──────────
   const riverFilterRef = useRef<BiquadFilterNode | null>(null);
   const riverGainRef = useRef<GainNode | null>(null);
 
-  // ─── Refs pour le drone Web Audio API ─────────────────────
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const oscRef = useRef<OscillatorNode | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
-  const lfoGainRef = useRef<GainNode | null>(null);
-  const lfoRef = useRef<OscillatorNode | null>(null);
-
   // ─── Valeurs lerpées pour transitions douces ──────────────
   const currentRiverVol = useRef(0.7);       // Fleuve fort
   const currentRiverFilter = useRef(2200);   // Filtre ouvert (Hz)
+  const currentBirdsVol = useRef(0.5);       // Oiseaux audibles
   const currentHeartVol = useRef(0.0);       // Cœur muet
-  const currentHeartRate = useRef(0.6);      // Rate lent
-
-  const currentDroneGain = useRef(0.0);      // Drone muet
+  const currentHeartRate = useRef(0.8);      // Rate lourd (plus lent au début)
 
   const rafRef = useRef<number | null>(null);
   const stressRef = useRef(stressLevel);
@@ -74,7 +64,8 @@ export default function SoundManager() {
         riverGain.gain.value = 0.7;
         riverGainRef.current = riverGain;
 
-        const soundIds = (riverRef.current as unknown as { _sounds: Array<{ _node: AudioNode }> })._sounds;
+        // @ts-ignore
+        const soundIds = riverRef.current._sounds;
         if (soundIds && soundIds.length > 0) {
           const sourceNode = soundIds[0]._node;
           if (sourceNode && 'disconnect' in sourceNode) {
@@ -94,48 +85,16 @@ export default function SoundManager() {
       riverRef.current.play();
     }
 
+    // 🐦 Lancer les oiseaux
+    if (birdsRef.current) {
+      birdsRef.current.volume(0.5);
+      birdsRef.current.play();
+    }
 
-
-
-
-    // 💓 Lancer le cœur (muet, prêt à monter)
+    // 💓 Lancer le nouveau cœur (muet au début)
     if (heartRef.current) {
       heartRef.current.volume(0);
       heartRef.current.play();
-    }
-
-    // 🌊 Drone basse fréquence via Web Audio API
-    try {
-      const ctx = audioCtxRef.current || new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      audioCtxRef.current = ctx;
-
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = 40;
-
-      const gain = ctx.createGain();
-      gain.gain.value = 0;
-      gainRef.current = gain;
-
-      const lfo = ctx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.3;
-      lfoRef.current = lfo;
-
-      const lfoGain = ctx.createGain();
-      lfoGain.gain.value = 0;
-      lfoGainRef.current = lfoGain;
-
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      oscRef.current = osc;
-
-      osc.start();
-      lfo.start();
-    } catch (e) {
-      console.warn('[SoundManager] Web Audio API non disponible:', e);
     }
 
     startUpdateLoop();
@@ -148,10 +107,9 @@ export default function SoundManager() {
       const lerpSpeed = 0.05;
 
       // ════════════════════════════════════════════════════════
-      // 🌊 COUCHE 1 : FLEUVE (disparaît avec le stress)
+      // 🌊 COUCHE 1 : FLEUVE (Phase 2 : Diminue avec le stress)
       // ════════════════════════════════════════════════════════
-      // Volume : 0.7 → 0.0 | Filtre : 2200 Hz → 150 Hz
-      const riverVolTarget = clamp(0.7 * (1 - stress * 1.3), 0, 0.7);
+      const riverVolTarget = clamp(0.7 * (1 - stress), 0, 0.7);
       const riverFilterTarget = clamp(2200 - (stress * 2050), 150, 2200);
 
       currentRiverVol.current = lerp(currentRiverVol.current, riverVolTarget, lerpSpeed);
@@ -167,18 +125,27 @@ export default function SoundManager() {
         riverFilterRef.current.frequency.value = currentRiverFilter.current;
       }
 
+      // ════════════════════════════════════════════════════════
+      // 🐦 COUCHE 2 : OISEAUX (Phase 2 : Synchro avec le fleuve)
+      // ════════════════════════════════════════════════════════
+      const birdsVolTarget = clamp(0.5 * (1 - stress), 0, 0.5);
+      currentBirdsVol.current = lerp(currentBirdsVol.current, birdsVolTarget, lerpSpeed);
 
-
-
+      if (birdsRef.current) {
+        birdsRef.current.volume(currentBirdsVol.current);
+        birdsRef.current.rate(1.0);
+      }
 
       // ════════════════════════════════════════════════════════
-      // 💓 COUCHE 4 : BATTEMENT DE CŒUR (apparaît dès 10%)
+      // 💓 COUCHE 3 : NOUVEAU CŒUR LOURD (Phase 4)
       // ════════════════════════════════════════════════════════
-      // Rate : 0.6 (lent) → 3.2 (tachycardie extrême et terrifiante)
-      // Volume : montée quadratique — TRÈS présent et oppressant
-      const heartStress = clamp((stress - 0.1) / 0.9, 0, 1);
-      const heartVolTarget = heartStress * heartStress * 1.0;
-      const heartRateTarget = 0.6 + heartStress * heartStress * 2.6; // 0.6 → 3.2
+      // Apparaît dès 0.1 de stress.
+      // Monte en puissance de manière très lourde.
+      const heartStress = clamp((stress - 0.1) / 0.9, 0, 1); // 0 à 1
+      const heartVolTarget = heartStress * heartStress * 1.0; // Courbe exponentielle
+
+      // Rate : 0.8 (lourd) -> 1.5 (rapide mais pas ridicule)
+      const heartRateTarget = 0.8 + heartStress * 0.7;
 
       currentHeartVol.current = lerp(currentHeartVol.current, heartVolTarget, lerpSpeed);
       currentHeartRate.current = lerp(currentHeartRate.current, heartRateTarget, lerpSpeed);
@@ -188,29 +155,6 @@ export default function SoundManager() {
         heartRef.current.rate(currentHeartRate.current);
       }
 
-      // ════════════════════════════════════════════════════════
-      // 🌊 COUCHE 5 : DRONE HORRIBLE (apparaît dès 50%)
-      // ════════════════════════════════════════════════════════
-      const droneStress = clamp((stress - 0.5) / 0.5, 0, 1);
-      const droneGainTarget = droneStress * droneStress * 0.18;
-
-      currentDroneGain.current = lerp(currentDroneGain.current, droneGainTarget, lerpSpeed * 0.5);
-
-      if (gainRef.current) {
-        gainRef.current.gain.value = currentDroneGain.current;
-      }
-
-      if (oscRef.current) {
-        oscRef.current.frequency.value = 40 + droneStress * 50;
-      }
-
-      if (lfoRef.current && lfoGainRef.current) {
-        lfoRef.current.frequency.value = 0.3 + droneStress * 6;
-        lfoGainRef.current.gain.value = droneStress * 0.1;
-      }
-
-
-
       rafRef.current = requestAnimationFrame(update);
     };
 
@@ -219,7 +163,7 @@ export default function SoundManager() {
 
   // ─── Effet principal : Chargement / Déchargement ──────────
   useEffect(() => {
-    // 🌊 Fleuve (Web Audio mode pour le filtre passe-bas)
+    // 🌊 Fleuve
     riverRef.current = new Howl({
       src: ['/sounds/river.mp3'],
       loop: true,
@@ -229,16 +173,22 @@ export default function SoundManager() {
       preload: true,
     });
 
+    // 🐦 Oiseaux
+    birdsRef.current = new Howl({
+      src: ['/sounds/birds.wav'],
+      loop: true,
+      volume: 0.5,
+      rate: 1.0,
+      html5: true,
+      preload: true,
+    });
 
-
-
-
-    // 💓 Battement de cœur — intense et oppressant
+    // 💓 Nouveau Cœur (Lourd)
     heartRef.current = new Howl({
-      src: ['/sounds/heartbeat.mp3'],
+      src: ['/sounds/heartbeat_heavy.mp3'], // Nouveau fichier
       loop: true,
       volume: 0,
-      rate: 0.6,
+      rate: 0.8,
       html5: true,
       preload: true,
     });
@@ -266,20 +216,12 @@ export default function SoundManager() {
       window.removeEventListener('touchstart', handleInteraction);
 
       riverRef.current?.unload();
+      birdsRef.current?.unload();
       heartRef.current?.unload();
-
-      try {
-        oscRef.current?.stop();
-        lfoRef.current?.stop();
-        audioCtxRef.current?.close();
-      } catch {
-        // Silencieux si déjà fermé
-      }
 
       audioStarted.current = false;
     };
   }, [initAudio]);
 
-  // Composant invisible — pas de rendu visuel
   return null;
 }
