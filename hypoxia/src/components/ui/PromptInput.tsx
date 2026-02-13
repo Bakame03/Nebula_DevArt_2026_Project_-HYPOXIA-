@@ -100,7 +100,7 @@ export default function PromptInput() {
   const promptText = useStore((s) => s.promptText);
   const stressLevel = useStore((s) => s.stressLevel);
   const permanentDamage = useStore((s) => s.permanentDamage);
-  const maxChars = useStore((s) => s.maxChars);
+  const maxTokens = useStore((s) => s.maxTokens);
   const setPrompt = useStore((s) => s.setPrompt);
   const reset = useStore((s) => s.reset);
 
@@ -108,11 +108,11 @@ export default function PromptInput() {
 
   const handleTextareaChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      if (e.target.value.length <= maxChars) {
+      if (e.target.value.length <= maxTokens) {
         setPrompt(e.target.value);
       }
     },
-    [maxChars, setPrompt],
+    [maxTokens, setPrompt],
   );
 
   const handleReset = useCallback(() => {
@@ -177,7 +177,7 @@ export default function PromptInput() {
                 boxShadow: "0 0 10px rgba(239, 68, 68, 0.5)",
               }}
               initial={{ width: 0 }}
-              animate={{ width: `${(promptText.length / maxChars) * 100}%` }}
+              animate={{ width: `${(promptText.length / maxTokens) * 100}%` }}
               transition={{ type: "tween", ease: "linear", duration: 0.1 }}
             />
           </div>
@@ -227,7 +227,7 @@ export default function PromptInput() {
               ref={textareaRef}
               value={promptText}
               onChange={handleTextareaChange}
-              maxLength={maxChars}
+              maxLength={maxTokens}
               rows={4}
               placeholder="Commence à taper... le système respire encore."
               spellCheck={false}
@@ -283,7 +283,7 @@ export default function PromptInput() {
           </div>
 
           {/* ── Oxygen Warning Overlay ── */}
-          {promptText.length >= maxChars && (
+          {promptText.length >= maxTokens && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -355,7 +355,7 @@ export default function PromptInput() {
               {String(promptText.length).padStart(3, "0")}
             </span>
             <span className="font-mono text-[10px] md:text-[11px] text-white/15">
-              / {maxChars}
+              / {maxTokens}
             </span>
             <span className="text-[7px] md:text-[8px] font-semibold uppercase tracking-[0.15em] text-white/12">
               Tokens

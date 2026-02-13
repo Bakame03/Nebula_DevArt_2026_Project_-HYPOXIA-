@@ -1,7 +1,8 @@
 import { create } from "zustand";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const MAX_CHARS = 200;
+export const MAX_TOKENS = 60;
+export const DEAD_TREE_THRESHOLD = 45;
 const CRITICAL_THRESHOLD = 0.75;
 const DAMAGE_INCREMENT = 0.002;
 const MAX_PERMANENT_DAMAGE = 0.5;
@@ -24,8 +25,8 @@ interface HypoxiaState {
    */
   permanentDamage: number;
 
-  /** Hard character limit before system "death". */
-  maxChars: number;
+  /** Hard token/character limit before system "death". */
+  maxTokens: number;
 
   // ── Actions ──────────────────────────────────────────────────────────────
   setPrompt: (text: string) => void;
@@ -37,7 +38,7 @@ const initialState = {
   promptText: "",
   stressLevel: 0,
   permanentDamage: 0,
-  maxChars: MAX_CHARS,
+  maxTokens: MAX_TOKENS,
 } as const;
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -48,7 +49,7 @@ export const useStore = create<HypoxiaState>()((set, get) => ({
     const { permanentDamage: prevDamage } = get();
 
     // 1. Raw stress based purely on character count
-    const rawStress = Math.min(text.length / MAX_CHARS, 1);
+    const rawStress = Math.min(text.length / MAX_TOKENS, 1);
 
     // 2. "L'Écho" — accumulate permanent damage while in the critical zone
     let nextDamage = prevDamage;

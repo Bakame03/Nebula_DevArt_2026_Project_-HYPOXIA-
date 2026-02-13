@@ -1,5 +1,5 @@
 "use client";
-import { useStore } from "@/store/useStore";
+import { useStore, DEAD_TREE_THRESHOLD } from "@/store/useStore";
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -22,7 +22,7 @@ export default function Forest() {
 
   // Determines if trees should be dead based on input length
   const promptText = useStore(s => s.promptText);
-  const isDead = promptText.length >= 150;
+  const isDead = promptText.length >= DEAD_TREE_THRESHOLD;
 
   // ── Billboard PlaneGeometry (tall rectangle for tree) ───────────────
   const planeGeo = useMemo(() => {
