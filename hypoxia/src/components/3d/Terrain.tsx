@@ -10,9 +10,10 @@ export default function Terrain() {
     const meshRef = useRef<THREE.Mesh>(null);
 
     // Géométrie du terrain (Haute résolution pour les détails)
+    // Géométrie du terrain (Haute résolution pour les détails)
     const geometry = useMemo(() => {
-        // Reset seed for consistency on re-renders if needed (though useMemo holds it)
-        seededRandom.reset(12345);
+        // Local generator instance for perfect isolation
+        const rng = new seededRandom(12345);
 
         // Plane de 100x100 avec haute résolution pour détails photoréalistes
         const geo = new THREE.PlaneGeometry(100, 100, 256, 256);
@@ -40,10 +41,10 @@ export default function Terrain() {
                 color.set("#b45309").lerp(new THREE.Color("#d97706"), t); // Dark to Light Ochre
             } else {
                 // Forest Floor (Tender Greens)
-                const baseGreen = seededRandom.next() > 0.5 ? "#86efac" : "#4ade80"; // Soft greens
+                const baseGreen = rng.next() > 0.5 ? "#86efac" : "#4ade80"; // Soft greens
                 color.set(baseGreen);
                 // Subtle variation
-                const noise = (seededRandom.next() - 0.5) * 0.15;
+                const noise = (rng.next() - 0.5) * 0.15;
                 color.offsetHSL(0, noise * 0.2, noise);
             }
             colors.push(color.r, color.g, color.b);

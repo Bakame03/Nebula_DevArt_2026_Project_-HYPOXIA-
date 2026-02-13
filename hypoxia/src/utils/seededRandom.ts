@@ -1,7 +1,7 @@
 // Simple Seeded Pseudo-Random Number Generator (Mulberry32)
 // This ensures that the scene generation is deterministic (same result every time).
 
-class SeededRandom {
+export default class SeededRandom {
     private seed: number;
 
     constructor(seed: number) {
@@ -25,8 +25,3 @@ class SeededRandom {
         this.seed = seed;
     }
 }
-
-// Global instance seeded with a fixed value for consistency across the app
-const seededRandom = new SeededRandom(12345);
-
-export default seededRandom;

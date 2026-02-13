@@ -18,16 +18,16 @@ export default function Forest() {
 
   // Generate valid tree positions
   const trees = useMemo(() => {
-    // Reset seed
-    seededRandom.reset(67890);
+    // Local generator
+    const rng = new seededRandom(67890);
 
     const validTrees = [];
     let attempts = 0;
 
     while (validTrees.length < TREE_COUNT && attempts < TREE_COUNT * 20) {
       attempts++;
-      const x = (seededRandom.next() - 0.5) * 90;
-      const z = (seededRandom.next() - 0.5) * 90;
+      const x = (rng.next() - 0.5) * 90;
+      const z = (rng.next() - 0.5) * 90;
 
       let minDist = 1000;
       for (let j = 0; j <= 20; j++) {
@@ -37,9 +37,9 @@ export default function Forest() {
       }
 
       if (minDist > 6) {
-        const scale = 0.8 + seededRandom.next() * 1.2;
+        const scale = 0.8 + rng.next() * 1.2;
         const y = getTerrainHeight(x, z);
-        const type = seededRandom.next();
+        const type = rng.next();
         validTrees.push({ x, y, z, scale, type });
       }
     }
@@ -50,8 +50,8 @@ export default function Forest() {
   useLayoutEffect(() => {
     if (!trunkMesh.current || !foliageMesh.current) return;
 
-    // Reset seed for consistent foliage generation
-    seededRandom.reset(13579);
+    // Local generator for layout effect
+    const rng = new seededRandom(13579);
 
     let foliageIndex = 0;
 
@@ -59,7 +59,7 @@ export default function Forest() {
       // 1. TRUNK
       tempObject.position.set(tree.x, tree.y + (1 * tree.scale), tree.z);
       tempObject.scale.set(tree.scale, tree.scale, tree.scale);
-      tempObject.rotation.set(0, seededRandom.next() * Math.PI, 0);
+      tempObject.rotation.set(0, rng.next() * Math.PI, 0);
       tempObject.updateMatrix();
       trunkMesh.current!.setMatrixAt(i, tempObject.matrix);
 
@@ -68,9 +68,9 @@ export default function Forest() {
 
       // 2. FOLIAGE
       for (let f = 0; f < FOLIAGE_PER_TREE; f++) {
-        const yOffset = (2 + seededRandom.next() * 1.5) * tree.scale;
-        const xOffset = (seededRandom.next() - 0.5) * 1.5 * tree.scale;
-        const zOffset = (seededRandom.next() - 0.5) * 1.5 * tree.scale;
+        const yOffset = (2 + rng.next() * 1.5) * tree.scale;
+        const xOffset = (rng.next() - 0.5) * 1.5 * tree.scale;
+        const zOffset = (rng.next() - 0.5) * 1.5 * tree.scale;
 
         tempObject.position.set(
           tree.x + xOffset,
@@ -78,9 +78,9 @@ export default function Forest() {
           tree.z + zOffset
         );
 
-        const fScale = tree.scale * (0.8 + seededRandom.next() * 0.7);
+        const fScale = tree.scale * (0.8 + rng.next() * 0.7);
         tempObject.scale.set(fScale, fScale, fScale);
-        tempObject.rotation.set(seededRandom.next() * Math.PI, seededRandom.next() * Math.PI, seededRandom.next() * Math.PI);
+        tempObject.rotation.set(rng.next() * Math.PI, rng.next() * Math.PI, rng.next() * Math.PI);
 
         tempObject.updateMatrix();
         foliageMesh.current!.setMatrixAt(foliageIndex, tempObject.matrix);

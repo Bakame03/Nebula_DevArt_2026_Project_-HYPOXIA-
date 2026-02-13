@@ -62,15 +62,16 @@ export default function Birds() {
 
     // --- Sky Birds Logic (Flock) ---
     const skyBirdsData = useMemo(() => {
-        seededRandom.reset(112233);
+        // Local generator
+        const rng = new seededRandom(112233);
         const data = [];
         for (let i = 0; i < SKY_BIRD_COUNT; i++) {
-            const x = (seededRandom.next() - 0.5) * 140;
-            const z = (seededRandom.next() - 0.5) * 140;
+            const x = (rng.next() - 0.5) * 140;
+            const z = (rng.next() - 0.5) * 140;
             // Lower altitude for visibility: 8m - 20m
-            const y = 8 + seededRandom.next() * 12;
-            const speed = 0.5 + seededRandom.next() * 0.5;
-            const offset = seededRandom.next() * Math.PI * 2;
+            const y = 8 + rng.next() * 12;
+            const speed = 0.5 + rng.next() * 0.5;
+            const offset = rng.next() * Math.PI * 2;
             data.push({ x, y, z, speed, offset, startY: y });
         }
         return data;

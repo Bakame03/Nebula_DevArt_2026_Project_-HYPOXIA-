@@ -120,13 +120,13 @@ export default function PromptInput() {
 
       {/* ── Shakeable wrapper — only the bar is interactive ──────────────── */}
       <motion.div
-        className="pointer-events-auto w-[90%] max-w-xl"
+        className="pointer-events-auto w-full max-w-xl px-4 md:w-[90%] md:px-0"
         variants={shakeVariants}
         animate={isCritical ? "shake" : "idle"}
       >
         {/* ── Liquid Glass Bar ──────────────────────────────────────────── */}
         <div
-          className="relative flex flex-col gap-3 rounded-[2rem] border px-5 py-4"
+          className="relative flex flex-col gap-3 rounded-[1.5rem] md:rounded-[2rem] border px-4 py-3 md:px-5 md:py-4"
           style={{
             background: isCritical
               ? "rgba(255, 10, 40, 0.06)"
@@ -141,7 +141,7 @@ export default function PromptInput() {
         >
           {/* ── Specular Highlight (light from top) ───────────────────── */}
           <div
-            className="pointer-events-none absolute inset-0 rounded-[2rem]"
+            className="pointer-events-none absolute inset-0 rounded-[1.5rem] md:rounded-[2rem]"
             style={{
               background:
                 "linear-gradient(to bottom, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 40%, transparent 100%)",
@@ -150,7 +150,7 @@ export default function PromptInput() {
 
           {/* ── Inner glow ring (glass edge catch) ────────────────────── */}
           <div
-            className="pointer-events-none absolute inset-[1px] rounded-[2rem]"
+            className="pointer-events-none absolute inset-[1px] rounded-[1.5rem] md:rounded-[2rem]"
             style={{
               boxShadow: isCritical
                 ? "inset 0 1px 0 rgba(255,100,100,0.15), inset 0 -1px 0 rgba(255,0,64,0.06)"
@@ -160,11 +160,11 @@ export default function PromptInput() {
           />
 
           {/* ── Bottom row: + button, Send button ────────────────────── */}
-          <div className="relative z-10 flex items-center gap-3">
+          <div className="relative z-10 flex items-center gap-2 md:gap-3">
             {/* ── + Button ──────────────────────────────────────────────── */}
             <motion.button
               type="button"
-              className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-colors duration-300"
+              className="relative z-10 flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full border transition-colors duration-300"
               style={{
                 backgroundColor: plusBtnBg,
                 borderColor: isCritical
@@ -193,7 +193,8 @@ export default function PromptInput() {
               autoComplete="off"
               className={`
               relative z-10 flex-1 min-w-0 resize-none
-              bg-transparent px-3 py-2 text-lg font-medium leading-relaxed
+              bg-transparent px-3 py-2
+              text-[16px] md:text-lg font-medium leading-relaxed
               tracking-wide outline-none hide-scrollbar
               ${placeholderOpacity}
             `}
@@ -211,7 +212,7 @@ export default function PromptInput() {
             {/* ── Send Button ───────────────────────────────────────────── */}
             <motion.button
               type="button"
-              className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
+              className="relative z-10 flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
               style={{ backgroundColor: sendBtnBg }}
               variants={btnPulseVariants}
               animate={isCritical ? "critical" : "idle"}
@@ -225,18 +226,18 @@ export default function PromptInput() {
         </div>
 
         {/* ── HUD Below: Integrity + Tokens + Écho ──────────────────────── */}
-        <div className="flex items-center justify-between px-8 pt-3">
+        <div className="flex items-center justify-between px-2 pt-2 md:px-8 md:pt-3">
           {/* System Integrity */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <span
-              className="text-[9px] font-bold uppercase tracking-[0.25em]"
+              className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.25em]"
               style={{
                 color: isCritical ? "#ff0040" : "rgba(255,255,255,0.3)",
               }}
             >
               Integrity
             </span>
-            <div className="h-[2px] w-28 overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="h-[2px] w-16 md:w-28 overflow-hidden rounded-full bg-white/[0.06]">
               <motion.div
                 className="h-full rounded-full"
                 style={{
@@ -252,12 +253,12 @@ export default function PromptInput() {
           </div>
 
           {/* Écho */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/20">
+          <div className="flex items-center gap-1 md:gap-1.5">
+            <span className="text-[8px] md:text-[9px] font-semibold uppercase tracking-[0.2em] text-white/20">
               Écho
             </span>
             <span
-              className="font-mono text-[10px] font-bold tabular-nums"
+              className="font-mono text-[9px] md:text-[10px] font-bold tabular-nums"
               style={{
                 color:
                   permanentDamage > 0 ? "#ff0040" : "rgba(255,255,255,0.15)",
@@ -268,19 +269,19 @@ export default function PromptInput() {
           </div>
 
           {/* Token counter */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 md:gap-1.5">
             <span
-              className="font-mono text-[11px] font-bold tabular-nums tracking-wider"
+              className="font-mono text-[10px] md:text-[11px] font-bold tabular-nums tracking-wider"
               style={{
                 color: isCritical ? "#ff0040" : "rgba(255,255,255,0.4)",
               }}
             >
               {String(promptText.length).padStart(3, "0")}
             </span>
-            <span className="font-mono text-[11px] text-white/15">
+            <span className="font-mono text-[10px] md:text-[11px] text-white/15">
               / {maxChars}
             </span>
-            <span className="text-[8px] font-semibold uppercase tracking-[0.15em] text-white/12">
+            <span className="text-[7px] md:text-[8px] font-semibold uppercase tracking-[0.15em] text-white/12">
               Tokens
             </span>
           </div>

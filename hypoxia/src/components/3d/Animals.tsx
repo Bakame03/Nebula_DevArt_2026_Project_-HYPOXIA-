@@ -102,16 +102,16 @@ export default function Animals() {
 
     // Generate valid animal positions
     const animals = useMemo(() => {
-        // Reset seed for consistency
-        seededRandom.reset(998877);
+        // Local generator
+        const rng = new seededRandom(998877);
 
         const validAnimals = [];
         let attempts = 0;
 
         while (validAnimals.length < ANIMAL_COUNT && attempts < ANIMAL_COUNT * 20) {
             attempts++;
-            const x = (seededRandom.next() - 0.5) * 90;
-            const z = (seededRandom.next() - 0.5) * 90;
+            const x = (rng.next() - 0.5) * 90;
+            const z = (rng.next() - 0.5) * 90;
 
             let minDist = 1000;
             for (let j = 0; j <= 20; j++) {
@@ -123,10 +123,10 @@ export default function Animals() {
             // Avoid river (keep them on land)
             if (minDist > 8) { // Keep them further from water edge
                 const y = getTerrainHeight(x, z);
-                const scale = 0.8 + seededRandom.next() * 0.4;
-                const rotationY = seededRandom.next() * Math.PI * 2;
+                const scale = 0.8 + rng.next() * 0.4;
+                const rotationY = rng.next() * Math.PI * 2;
                 // Random phase for idle animation
-                const phase = seededRandom.next() * Math.PI * 2;
+                const phase = rng.next() * Math.PI * 2;
                 validAnimals.push({ x, y, z, scale, rotationY, phase });
             }
         }

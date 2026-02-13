@@ -47,29 +47,46 @@ function SceneLight() {
 function ResponsiveCamera() {
   const { camera, size } = useThree();
 
-  React.useEffect(() => {
+  useFrame(() => {
     // Only adjust FOV for PerspectiveCamera
     if ('fov' in camera) {
       const aspect = size.width / size.height;
 
-      // Adjust FOV and Position for different screen sizes to keep the scene in view
-      if (aspect < 0.8) {
-        // Mobile Portrait (Phone)
-        camera.fov = 65;
-        camera.position.set(0, 8, 32);
-      } else if (aspect < 1.2) {
-        // Tablet / Square-ish
-        camera.fov = 55;
-        camera.position.set(0, 7, 28);
+      // Target values based on aspect ratio
+      // Wide screen (Desktop): aspect ~1.77 -> FOV 45, Z 25
+      // Square (Tablet): aspect ~1.0 -> FOV 55, Z 28
+      // Tall screen (Mobile): aspect ~0.5 -> FOV 75, Z 35
+
+      // Interpolation factor based on aspect ratio range [0.5, 2.0]
+      // We assume typical range is 0.5 (mobile) to 1.8 (desktop)
+
+      let targetFov = 45;
+      let targetZ = 25;
+      let targetY = 6;
+
+      if (aspect < 1.0) {
+        // Linearly interpolate between Mobile (0.5) and Square (1.0)
+        // t = 0 (at 0.5) to 1 (at 1.0)
+        const t = Math.min(Math.max((aspect - 0.5) / 0.5, 0), 1);
+        targetFov = THREE.MathUtils.lerp(75, 55, t);
+        targetZ = THREE.MathUtils.lerp(35, 28, t);
+        targetY = THREE.MathUtils.lerp(9, 7, t);
       } else {
-        // Desktop / Landscape
-        camera.fov = 45;
-        camera.position.set(0, 6, 25);
+        // Linearly interpolate between Square (1.0) and Wide (1.8)
+        const t = Math.min(Math.max((aspect - 1.0) / 0.8, 0), 1);
+        targetFov = THREE.MathUtils.lerp(55, 45, t);
+        targetZ = THREE.MathUtils.lerp(28, 25, t);
+        targetY = THREE.MathUtils.lerp(7, 6, t);
       }
+
+      // Smooth damping
+      camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
+      camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.1);
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.1);
 
       camera.updateProjectionMatrix();
     }
-  }, [camera, size]);
+  });
 
   return null;
 }
