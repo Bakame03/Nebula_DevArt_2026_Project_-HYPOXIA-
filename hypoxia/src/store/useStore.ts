@@ -10,7 +10,6 @@ const MAX_PERMANENT_DAMAGE = 0.5;
 interface HypoxiaState {
   /** Current prompt text entered by the user. */
   promptText: string;
-
   /**
    * Effective stress level exposed to components.
    * Always >= permanentDamage (the system never fully heals).

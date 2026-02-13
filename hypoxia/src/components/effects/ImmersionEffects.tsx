@@ -54,7 +54,7 @@ export default function ImmersionEffects() {
     return (
         <>
             {/* TENTE DE REMPLACER LE FOG GLOBAL PAR CELUI-CI */}
-            <fog ref={fogRef} attach="fog" args={['#020617', 5, 20]} />
+            {/* <fog ref={fogRef} attach="fog" args={['#020617', 5, 20]} /> */}
 
             <EffectComposer>
                 <Bloom
