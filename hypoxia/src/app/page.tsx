@@ -15,6 +15,7 @@ import Animals from "@/components/3d/Animals";
 import Birds from "@/components/3d/Birds";
 import AshParticles from "@/components/particles/AshParticles";
 import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocessing";
+import CinematicCamera from "@/components/utils/CinematicCamera";
 
 function SceneLight() {
   const stress = useStore(s => s.stressLevel);
@@ -100,6 +101,18 @@ function ReactiveFog() {
 }
 
 export default function Home() {
+  const [cinematicMode, setCinematicMode] = React.useState(true);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'c') {
+        setCinematicMode((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <main className="relative w-screen h-screen bg-black overflow-hidden select-none">
       <SoundManager />
@@ -114,7 +127,11 @@ export default function Home() {
           <ReactiveFog />
 
           <SceneLight />
-          <ResponsiveCamera />
+          {/* Default Responsive Camera (disabled in Cinematic Mode) */}
+          {!cinematicMode && <ResponsiveCamera />}
+
+          {/* Cinematic Mode Camera */}
+          {cinematicMode && <CinematicCamera active={cinematicMode} />}
 
           <Environment preset="forest" background={false} />
 
