@@ -205,6 +205,9 @@ export default function SoundManager() {
     window.addEventListener('keydown', handleInteraction);
     window.addEventListener('touchstart', handleInteraction);
 
+    // TENTATIVE D'AUTO-PLAY (Si le navigateur le permet)
+    initAudio();
+
     // ─── Cleanup propre ───
     return () => {
       if (rafRef.current) {
