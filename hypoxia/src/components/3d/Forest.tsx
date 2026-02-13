@@ -1,6 +1,6 @@
 "use client";
 import { useStore } from "@/store/useStore";
-import { useRef, useMemo, useLayoutEffect } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
@@ -8,37 +8,23 @@ import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
 import seededRandom from "@/utils/seededRandom";
 
 const tempObject = new THREE.Object3D();
-const tempColor = new THREE.Color();
 
 export default function Forest() {
   const { stressLevel } = useStore();
-  const trunkMesh = useRef<THREE.InstancedMesh>(null);
-  const foliageMesh = useRef<THREE.InstancedMesh>(null);
+  const meshRef = useRef<THREE.InstancedMesh>(null);
 
   const TREE_COUNT = 200;
-  const FOLIAGE_PER_TREE = 4;
 
-  // ── Load Normal Map Texture ───────────────────────────────────────────
-  const barkNormal = useTexture("/textures/bark_normal.jpg");
+  // ── Load Tree Sprite Texture ────────────────────────────────────────
+  const treeTexture = useTexture("/textures/tree_sprite.png");
 
-  // Configure texture wrapping for trunks
-  useMemo(() => {
-    barkNormal.wrapS = THREE.RepeatWrapping;
-    barkNormal.wrapT = THREE.RepeatWrapping;
-    barkNormal.repeat.set(2, 4); // Repeat vertically for bark grain
-  }, [barkNormal]);
+  // ── Billboard PlaneGeometry (tall rectangle for tree) ───────────────
+  const planeGeo = useMemo(() => {
+    // Width 5, Height 8 → tall tree proportions
+    return new THREE.PlaneGeometry(5, 8);
+  }, []);
 
-  // ── Reuse same texture with different config for foliage ──────────────
-  const leafNormal = useMemo(() => {
-    const tex = barkNormal.clone();
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(1, 1);
-    tex.needsUpdate = true;
-    return tex;
-  }, [barkNormal]);
-
-  // Generate valid tree positions
+  // ── Generate valid tree positions ───────────────────────────────────
   const trees = useMemo(() => {
     const rng = new seededRandom(67890);
     const validTrees = [];
@@ -49,6 +35,7 @@ export default function Forest() {
       const x = (rng.next() - 0.5) * 90;
       const z = (rng.next() - 0.5) * 90;
 
+      // Avoid the river
       let minDist = 1000;
       for (let j = 0; j <= 20; j++) {
         const point = riverCurve.getPoint(j / 20);
@@ -57,96 +44,58 @@ export default function Forest() {
       }
 
       if (minDist > 6) {
-        const scale = 0.8 + rng.next() * 1.2;
+        const scale = 0.6 + rng.next() * 1.0; // Random scale variation
         const y = getTerrainHeight(x, z);
-        const type = rng.next();
-        validTrees.push({ x, y, z, scale, type });
+        validTrees.push({ x, y, z, scale });
       }
     }
     return validTrees;
   }, []);
 
-  // Update layout (Static, lush forest)
-  useLayoutEffect(() => {
-    if (!trunkMesh.current || !foliageMesh.current) return;
-
-    const rng = new seededRandom(13579);
-    let foliageIndex = 0;
-
-    trees.forEach((tree, i) => {
-      // 1. TRUNK
-      tempObject.position.set(tree.x, tree.y + (1 * tree.scale), tree.z);
-      tempObject.scale.set(tree.scale, tree.scale, tree.scale);
-      tempObject.rotation.set(0, rng.next() * Math.PI, 0);
-      tempObject.updateMatrix();
-      trunkMesh.current!.setMatrixAt(i, tempObject.matrix);
-
-      // Trunk Color: Always Brown
-      const baseTrunk = new THREE.Color("#3e2723");
-      trunkMesh.current!.setColorAt(i, baseTrunk);
-
-      // 2. FOLIAGE
-      const baseFoliage = new THREE.Color("#22c55e");
-      tempColor.copy(baseFoliage);
-
-      for (let f = 0; f < FOLIAGE_PER_TREE; f++) {
-        const yOffset = (2 + rng.next() * 1.5) * tree.scale;
-        const xOffset = (rng.next() - 0.5) * 1.5 * tree.scale;
-        const zOffset = (rng.next() - 0.5) * 1.5 * tree.scale;
-
-        tempObject.position.set(
-          tree.x + xOffset,
-          tree.y + yOffset,
-          tree.z + zOffset
-        );
-
-        const fScale = tree.scale * (0.8 + rng.next() * 0.7);
-
-        tempObject.scale.set(fScale, fScale, fScale);
-        tempObject.rotation.set(rng.next() * Math.PI, rng.next() * Math.PI, rng.next() * Math.PI);
-
-        tempObject.updateMatrix();
-        foliageMesh.current!.setMatrixAt(foliageIndex, tempObject.matrix);
-        foliageMesh.current!.setColorAt(foliageIndex, tempColor);
-        foliageIndex++;
-      }
-    });
-
-    trunkMesh.current.instanceMatrix.needsUpdate = true;
-    if (trunkMesh.current.instanceColor) trunkMesh.current.instanceColor.needsUpdate = true;
-
-    foliageMesh.current.instanceMatrix.needsUpdate = true;
-    if (foliageMesh.current.instanceColor) foliageMesh.current.instanceColor.needsUpdate = true;
-
+  // ── Set initial positions (once) ────────────────────────────────────
+  useMemo(() => {
+    // We need to defer this to after mount, but we can prepare the data
   }, [trees]);
 
-  return (
-    <group>
-      {/* TRUNKS — with Bark Normal Map */}
-      <instancedMesh ref={trunkMesh} args={[undefined, undefined, trees.length]}>
-        <cylinderGeometry args={[0.2, 0.4, 2, 8]} />
-        <meshStandardMaterial
-          color="#3e2723"
-          normalMap={barkNormal}
-          normalScale={new THREE.Vector2(0.8, 0.8)}
-          roughness={0.95}
-          metalness={0.0}
-          envMapIntensity={0.2}
-        />
-      </instancedMesh>
+  // ── Every frame: make billboards face the camera ────────────────────
+  useFrame((state) => {
+    if (!meshRef.current) return;
 
-      {/* FOLIAGE — with Leaf Normal Map for surface detail */}
-      <instancedMesh ref={foliageMesh} args={[undefined, undefined, trees.length * FOLIAGE_PER_TREE]}>
-        <coneGeometry args={[1.2, 2.5, 6]} />
-        <meshStandardMaterial
-          color="#22c55e"
-          normalMap={leafNormal}
-          normalScale={new THREE.Vector2(0.3, 0.3)}
-          roughness={0.7}
-          metalness={0.0}
-          envMapIntensity={0.5}
-        />
-      </instancedMesh>
-    </group>
+    const camera = state.camera;
+
+    trees.forEach((tree, i) => {
+      // Position the tree, offset Y by half its height so the base is on the ground
+      tempObject.position.set(tree.x, tree.y + (4 * tree.scale), tree.z);
+
+      // Billboard: make the plane always face the camera
+      // We only rotate around Y axis (vertical billboard) so they don't tilt
+      const dx = camera.position.x - tree.x;
+      const dz = camera.position.z - tree.z;
+      const angle = Math.atan2(dx, dz);
+      tempObject.rotation.set(0, angle, 0);
+
+      // Scale
+      tempObject.scale.set(tree.scale, tree.scale, tree.scale);
+
+      tempObject.updateMatrix();
+      meshRef.current!.setMatrixAt(i, tempObject.matrix);
+    });
+
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={meshRef} args={[planeGeo, undefined, trees.length]}>
+      <meshStandardMaterial
+        map={treeTexture}
+        alphaTest={0.5}
+        transparent
+        side={THREE.DoubleSide}
+        roughness={0.8}
+        metalness={0.0}
+        envMapIntensity={0.5}
+        depthWrite={true}
+      />
+    </instancedMesh>
   );
 }
