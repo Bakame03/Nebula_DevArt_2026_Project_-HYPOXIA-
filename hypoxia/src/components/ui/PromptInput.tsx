@@ -99,7 +99,7 @@ export default function PromptInput() {
   // ── Dynamic style tokens ────────────────────────────────────────────────
   const borderColor = isCritical
     ? `rgba(255, 0, 64, ${0.4 + stressLevel * 0.4})`
-    : "rgba(255, 255, 255, 0.20)";
+    : "rgba(255, 255, 255, 0.15)"; // More subtle border
 
   const outerShadow = isCritical
     ? "0 0 50px rgba(220, 38, 38, 0.5), 0 0 100px rgba(255, 0, 64, 0.15)"
@@ -120,25 +120,38 @@ export default function PromptInput() {
 
       {/* ── Shakeable wrapper — only the bar is interactive ──────────────── */}
       <motion.div
-        className="pointer-events-auto w-full max-w-xl px-4 md:w-[90%] md:px-0"
+        className="pointer-events-auto w-[90vw] max-w-[1100px]" // Very wide
         variants={shakeVariants}
         animate={isCritical ? "shake" : "idle"}
       >
         {/* ── Liquid Glass Bar ──────────────────────────────────────────── */}
         <div
-          className="relative flex flex-col gap-3 rounded-[1.5rem] md:rounded-[2rem] border px-4 py-3 md:px-5 md:py-4"
+          className="relative flex flex-col gap-3 rounded-[1.5rem] md:rounded-[2rem] border px-4 py-3 md:px-5 md:py-4 overflow-hidden shadow-2xl"
           style={{
             background: isCritical
-              ? "rgba(255, 10, 40, 0.06)"
-              : "rgba(255, 255, 255, 0.10)",
-            backdropFilter: "blur(60px) saturate(1.4)",
-            WebkitBackdropFilter: "blur(60px) saturate(1.4)",
-            borderColor,
-            boxShadow: outerShadow,
+              ? "rgba(255, 10, 40, 0.1)"
+              : "rgba(20, 20, 30, 0.2)", // More transparent (was 0.4)
+            backdropFilter: "blur(10px) saturate(1.5)", // Slightly less blur
+            WebkitBackdropFilter: "blur(10px) saturate(1.5)",
+            borderColor: isCritical ? borderColor : "rgba(255, 255, 255, 0.15)",
+            boxShadow: isCritical ? outerShadow : "0 8px 32px 0 rgba(0, 0, 0, 0.2)", // Lighter shadow
             transition:
               "background 0.5s ease, border-color 0.4s ease, box-shadow 0.5s ease",
           }}
         >
+          {/* ── Progress Line (Yellow -> Red) ─────────────────────────── */}
+          <div className="absolute bottom-0 left-0 h-[2px] w-full bg-white/5">
+            <motion.div
+              className="h-full"
+              style={{
+                background: "linear-gradient(90deg, #facc15 0%, #ef4444 100%)", // Yellow to Red
+                boxShadow: "0 0 10px rgba(239, 68, 68, 0.5)",
+              }}
+              initial={{ width: 0 }}
+              animate={{ width: `${(promptText.length / maxChars) * 100}%` }}
+              transition={{ type: "tween", ease: "linear", duration: 0.1 }}
+            />
+          </div>
           {/* ── Specular Highlight (light from top) ───────────────────── */}
           <div
             className="pointer-events-none absolute inset-0 rounded-[1.5rem] md:rounded-[2rem]"
@@ -223,6 +236,24 @@ export default function PromptInput() {
               <ArrowUpIcon color={sendIconColor} />
             </motion.button>
           </div>
+
+          {/* ── Oxygen Warning Overlay ── */}
+          {promptText.length >= maxChars && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/80 rounded-[1.5rem] md:rounded-[2rem] z-20 backdrop-blur-sm"
+            >
+              <div className="flex flex-col items-center gap-2 text-red-500 animate-pulse">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                </svg>
+                <span className="font-bold tracking-[0.2em] text-xs uppercase">Oxygène Épuisé</span>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* ── HUD Below: Integrity + Tokens + Écho ──────────────────────── */}
@@ -286,7 +317,7 @@ export default function PromptInput() {
             </span>
           </div>
         </div>
-      </motion.div>
-    </div>
+      </motion.div >
+    </div >
   );
 }
