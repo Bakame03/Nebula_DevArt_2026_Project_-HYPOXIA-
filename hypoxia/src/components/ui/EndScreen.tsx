@@ -59,6 +59,7 @@ export default function EndScreen({ visible }: EndScreenProps) {
   const co2Grams = useStore((s) => s.co2Grams);
   const permanentDamage = useStore((s) => s.permanentDamage);
   const totalCharsTyped = useStore((s) => s.totalCharsTyped);
+  const promptText = useStore((s) => s.promptText);
   const hardReset = useStore((s) => s.hardReset);
 
   const streamingMinutes = (co2Grams / STREAMING_G_PER_MIN).toFixed(0);
@@ -211,6 +212,38 @@ export default function EndScreen({ visible }: EndScreenProps) {
                 </span>
               </div>
             </div>
+
+            {/* Prompt vs Cost — "votre question valait-elle ça ?" */}
+            {promptText.trim().length > 0 && (
+              <div
+                className="rounded-xl border border-white/8 p-4 flex flex-col gap-3"
+                style={{ background: "rgba(255,255,255,0.03)" }}
+              >
+                <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/25">
+                  Votre prompt — ce que ça a coûté
+                </span>
+                {/* Prompt preview */}
+                <p
+                  className="text-[11px] text-white/50 italic leading-relaxed"
+                  style={{ fontFamily: "'Courier New', monospace" }}
+                >
+                  &ldquo;{promptText.slice(0, 80)}{promptText.length > 80 ? "…" : ""}&rdquo;
+                </p>
+                {/* Cost breakdown */}
+                <div className="flex gap-3 text-center">
+                  {[
+                    { val: `${(co2Grams * 1000).toFixed(1)} mg`, label: "de CO₂" },
+                    { val: `${(co2Grams / 0.036).toFixed(0)} s`, label: "de streaming" },
+                    { val: `${(co2Grams / 0.2).toFixed(1)}`, label: "recherches Google" },
+                  ].map(({ val, label }) => (
+                    <div key={label} className="flex-1 flex flex-col gap-0.5 rounded-lg border border-white/6 py-2">
+                      <span className="text-sm font-black text-red-400">{val}</span>
+                      <span className="text-[8px] text-white/25 leading-tight">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3">

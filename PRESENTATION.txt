@@ -1,0 +1,106 @@
+════════════════════════════════════════════════════════════════
+  HYPOXIA — L'Écho Numérique
+  DevArt 2026
+════════════════════════════════════════════════════════════════
+
+
+QU'EST-CE QUE C'EST ?
+──────────────────────
+
+HYPOXIA est une expérience artistique interactive en 3D qui rend
+visible le coût environnemental invisible de l'intelligence
+artificielle.
+
+Tu arrives dans un paysage naturel vivant — forêt, rivière, ciel,
+oiseaux — et tu commences à taper un prompt, exactement comme tu
+le ferais avec ChatGPT ou n'importe quel LLM.
+
+
+CE QUI SE PASSE QUAND TU TAPES
+────────────────────────────────
+
+À chaque caractère tapé, l'écosystème se dégrade en temps réel :
+
+  · La rivière s'éteint progressivement (filtrée, étouffée)
+  · Les oiseaux disparaissent
+  · Les arbres jaunissent, brunissent, meurent
+  · Le sol se craquelle et s'assèche
+  · Le ciel vire du bleu au rouge sang
+  · La pluie devient acide (couleur jaune toxique)
+  · Le sol prend feu aux niveaux critiques
+  · Le battement de cœur s'accélère
+  · L'écran pulse, glitch et se déforme
+  · Une CICATRICE PERMANENTE reste dans le système —
+    même après reset, le dommage ne disparaît jamais totalement
+
+
+À LA FIN
+─────────
+
+Tu reçois :
+
+  · Ton score écologique (A+ à F)
+  · La quantité de CO₂ générée par ta session (en mg/g/kg)
+  · Des équivalences concrètes :
+      - Combien de minutes de streaming vidéo
+      - Combien de recherches Google
+      - Quel impact si 1 million d'utilisateurs faisaient la même chose
+  · Un bouton pour capturer une "cicatrice" — une photo de la
+    destruction que tu as causée
+
+
+════════════════════════════════════════════════════════════════
+  LA LEÇON
+════════════════════════════════════════════════════════════════
+
+
+  "L'IA n'est pas gratuite. Elle consomme la planète —
+   silencieusement."
+
+
+Chaque requête envoyée à un modèle d'intelligence artificielle
+consomme de l'électricité dans des data centers qui tournent 24h/24,
+refroidis par des milliers de litres d'eau, alimentés en grande partie
+par des énergies fossiles.
+
+Ce coût est INVISIBLE PAR DESIGN.
+Tu tapes du texte sur un écran propre. Tu obtiens une réponse propre.
+Rien ne te montre les émissions. Rien ne te montre la trace.
+
+HYPOXIA brise cette illusion.
+
+Elle crée une corrélation sensorielle directe entre ton acte (taper)
+et la destruction (la forêt qui meurt) — ce que le monde réel
+ne te montre jamais.
+
+
+LE CONCEPT CLÉ : LA CICATRICE PERMANENTE
+──────────────────────────────────────────
+
+Une fois que le carbone est émis, il ne disparaît pas.
+"Reset" ne signifie pas réparation.
+
+Dans HYPOXIA, le dommage permanent (permanentDamage) s'accumule
+session après session et ne peut pas être effacé. C'est une métaphore
+directe de la réalité climatique : on ne peut pas appuyer sur annuler.
+
+
+LES CHIFFRES RÉELS
+───────────────────
+
+  · ~0.001 g de CO₂ par caractère tapé dans un LLM
+  · ~4 g de CO₂ par requête GPT-4 complète
+  · ~160 g de CO₂ par seconde générés par l'IA mondiale (estimé 2025)
+  · L'IA mondiale représente aujourd'hui ~2-3% des émissions
+    mondiales de carbone — autant que l'aviation
+
+
+════════════════════════════════════════════════════════════════
+  EN UNE PHRASE
+════════════════════════════════════════════════════════════════
+
+HYPOXIA transforme une abstraction invisible — le coût carbone de
+l'IA — en expérience viscérale et mémorable, pour que tu ne puisses
+plus jamais ignorer ce que tu fais quand tu écris un prompt.
+
+════════════════════════════════════════════════════════════════

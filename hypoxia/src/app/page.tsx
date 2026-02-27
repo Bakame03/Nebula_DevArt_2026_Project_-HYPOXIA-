@@ -27,6 +27,10 @@ import GlobalCO2Ticker from "@/components/ui/GlobalCO2Ticker";
 import ReactiveSky from "@/components/3d/ReactiveSky";
 import FireParticles from "@/components/particles/FireParticles";
 import AcidRain from "@/components/particles/AcidRain";
+import DegradedAI from "@/components/ui/DegradedAI";
+import WhisperVoices from "@/components/ui/WhisperVoices";
+import RecoveryManager from "@/components/ui/RecoveryManager";
+import ExtinctSpecies from "@/components/ui/ExtinctSpecies";
 
 // ─── Scene sub-components ─────────────────────────────────────────────────────
 
@@ -200,8 +204,12 @@ export default function Home() {
       <div className="absolute inset-0 z-10 w-full h-full pointer-events-none">
         {introComplete && (
           <>
+            <DegradedAI />
             <NarrativeMessages />
+            <ExtinctSpecies />
             <GlobalCO2Ticker />
+            <RecoveryManager />
+            <WhisperVoices />
             <PromptInput
               cinematicMode={cinematicMode}
               onToggleCinematic={toggleCinematic}

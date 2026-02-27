@@ -32,12 +32,18 @@ interface HypoxiaState {
   co2Grams: number;
   /** True when the prompt has reached the hard limit — triggers the end screen. */
   hasReachedMax: boolean;
+  /** True immediately after reset() — the forest is visually regenerating. */
+  isRecovering: boolean;
+  /** Visual recovery progress 0..1 (driven by a timer, not gameplay). */
+  recoveryProgress: number;
 
   setPrompt: (text: string) => void;
   /** Soft reset: clears text but preserves permanent damage and session CO₂. */
   reset: () => void;
   /** Hard reset: wipes everything including permanent damage (new session). */
   hardReset: () => void;
+  /** Advance recovery — called every second by RecoveryManager. */
+  tickRecovery: () => void;
 }
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -49,6 +55,8 @@ export const useStore = create<HypoxiaState>()(persist((set, get) => ({
   totalCharsTyped: 0,
   co2Grams: 0,
   hasReachedMax: false,
+  isRecovering: false,
+  recoveryProgress: 0,
 
   setPrompt: (text: string) => {
     const { permanentDamage: prevDamage, totalCharsTyped, promptText } = get();
@@ -86,6 +94,8 @@ export const useStore = create<HypoxiaState>()(persist((set, get) => ({
       totalCharsTyped,
       co2Grams,
       hasReachedMax: false,
+      isRecovering: true,
+      recoveryProgress: 0,
     });
   },
 
@@ -98,7 +108,16 @@ export const useStore = create<HypoxiaState>()(persist((set, get) => ({
       totalCharsTyped: 0,
       co2Grams: 0,
       hasReachedMax: false,
+      isRecovering: false,
+      recoveryProgress: 0,
     }),
+
+  tickRecovery: () => {
+    const { isRecovering, recoveryProgress } = get();
+    if (!isRecovering) return;
+    const next = Math.min(recoveryProgress + 0.012, 1); // ~83s to full recovery
+    set({ recoveryProgress: next, isRecovering: next < 1 });
+  },
 }), {
   name: "hypoxia-echo",
   // Only persist the "scar" — the ecological damage that outlasts the session.
