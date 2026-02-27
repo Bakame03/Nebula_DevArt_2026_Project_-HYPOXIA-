@@ -107,11 +107,12 @@ export default function Decorations() {
         }
     }, [rocks, ferns]);
 
-    // Fern Color: Vibrant Green -> Dead Brown based on stress
-    const fernColor = new THREE.Color("#16a34a").lerp(
-        new THREE.Color("#4b3621"),
-        Math.min(stressLevel + permanentDamage, 1)
-    );
+    const fernColor = useMemo(() => {
+        return new THREE.Color("#16a34a").lerp(
+            new THREE.Color("#4b3621"),
+            Math.min(stressLevel + permanentDamage, 1),
+        );
+    }, [stressLevel, permanentDamage]);
 
     return (
         <group>

@@ -1,48 +1,39 @@
 "use client";
 
-import React, { useRef, useMemo } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { EffectComposer, Vignette, Noise, ChromaticAberration, Glitch, HueSaturation, Bloom } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
+import type { VignetteEffect } from 'postprocessing';
 import * as THREE from 'three';
-import { useStore } from '../../store/useStore';
+import { useStore } from '@/store/useStore';
 
 export default function ImmersionEffects() {
     const stressLevel = useStore((state) => state.stressLevel);
     const permanentDamage = useStore((state) => state.permanentDamage);
 
-    // Refs
-    const vignetteRef = useRef<any>(null);
-    const fogRef = useRef<THREE.Fog>(null);
+    const vignetteRef = useRef<VignetteEffect>(null);
 
     useFrame((state) => {
         const t = state.clock.elapsedTime;
 
-        // --- AUDIO SYNC PULSE ---
-        const heartStress = Math.max(0, Math.min(1, (stressLevel - 0.3) / 0.7));
-        const heartRate = 0.6 + (heartStress * heartStress * 1.9);
-        const pulseSpeed = heartRate * 5;
+        // Heartbeat shape: two sharp gaussian peaks (lub + dub) then silence
+        // Much more realistic than a continuous sine wave
+        const heartStress = Math.max(0, Math.min(1, (stressLevel - 0.15) / 0.85));
+        const bpm = 55 + heartStress * 75; // 55 → 130 BPM
+        const period = 60 / bpm; // seconds per beat
+        const phase = (t % period) / period; // 0..1 within beat cycle
 
-        const baseDarkness = 0.4 + (stressLevel * 0.3);
-        const pulseStrength = heartStress * 0.15;
-        const pulse = (Math.sin(t * pulseSpeed) + 1) / 2;
+        // Lub: gaussian peak at phase 0.08, dub at phase 0.22
+        const lub = Math.exp(-Math.pow((phase - 0.08) / 0.030, 2));
+        const dub = Math.exp(-Math.pow((phase - 0.22) / 0.025, 2)) * 0.55;
+        const beat = Math.min(1, lub + dub);
+
+        const baseDarkness = 0.38 + stressLevel * 0.28;
+        const pulseStrength = heartStress * 0.18;
 
         if (vignetteRef.current) {
-            vignetteRef.current.darkness = baseDarkness + (pulse * pulseStrength);
-        }
-
-        // --- TOXIC FOG (Re-implemented safely) ---
-        if (fogRef.current) {
-            const fog = fogRef.current;
-
-            // Color: Deep Blue -> Red/Black
-            const baseColor = new THREE.Color("#020617");
-            const toxicColor = new THREE.Color("#1a0505");
-            fog.color.lerpColors(baseColor, toxicColor, stressLevel * 1.2);
-
-            // Density
-            fog.near = 5 - (stressLevel * 3);
-            fog.far = 20 - (stressLevel * 10);
+            vignetteRef.current.darkness = baseDarkness + beat * pulseStrength;
         }
     });
 
@@ -53,9 +44,6 @@ export default function ImmersionEffects() {
 
     return (
         <>
-            {/* TENTE DE REMPLACER LE FOG GLOBAL PAR CELUI-CI */}
-            {/* <fog ref={fogRef} attach="fog" args={['#020617', 5, 20]} /> */}
-
             <EffectComposer>
                 <Bloom
                     intensity={stressLevel * 1.0}

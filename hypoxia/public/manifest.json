@@ -1,0 +1,26 @@
+{
+  "name": "HYPOXIA | L'Écho Numérique",
+  "short_name": "HYPOXIA",
+  "description": "L'impact environnemental invisible de l'IA. Une installation d'art interactif — DevArt 2026.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "categories": ["entertainment", "art"],
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

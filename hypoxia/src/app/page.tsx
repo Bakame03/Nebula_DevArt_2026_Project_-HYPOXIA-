@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Environment, ContactShadows } from "@react-three/drei";
@@ -14,133 +14,170 @@ import Decorations from "@/components/3d/Decorations";
 import Animals from "@/components/3d/Animals";
 import Birds from "@/components/3d/Birds";
 import AshParticles from "@/components/particles/AshParticles";
-import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocessing";
 import CinematicCamera from "@/components/utils/CinematicCamera";
+import LoadingScreen from "@/components/ui/LoadingScreen";
+import IntroScreen from "@/components/ui/IntroScreen";
+import EndScreen from "@/components/ui/EndScreen";
+import NarrativeMessages from "@/components/ui/NarrativeMessages";
+import HelpPanel from "@/components/ui/HelpPanel";
+import FaviconManager from "@/components/ui/FaviconManager";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import CustomCursor from "@/components/ui/CustomCursor";
+import GlobalCO2Ticker from "@/components/ui/GlobalCO2Ticker";
+import ReactiveSky from "@/components/3d/ReactiveSky";
+import FireParticles from "@/components/particles/FireParticles";
+import AcidRain from "@/components/particles/AcidRain";
+
+// ─── Scene sub-components ─────────────────────────────────────────────────────
 
 function SceneLight() {
-  const stress = useStore(s => s.stressLevel);
+  const stress = useStore((s) => s.stressLevel);
 
   return (
     <>
-      {/* Ambiance Mystique (Mystic Mist) */}
-      <ambientLight intensity={0.6 - (stress * 0.3)} color="#c7d2fe" />
-
-      {/* Rayons Solaires (God Rays from Top-Left) */}
+      <ambientLight intensity={0.6 - stress * 0.3} color="#c7d2fe" />
       <directionalLight
-        position={[-50, 40, -40]} // Top-Left-Back
-        intensity={2.5 - (stress * 1.0)} // Strong sunlight
+        position={[-50, 40, -40]}
+        intensity={2.5 - stress * 1.0}
         castShadow
-        color="#fff7ed" // Warm Sunlight
+        color="#fff7ed"
         shadow-bias={-0.0005}
-        shadow-mapSize={[4096, 4096]} // High Res Shadows for God Rays
+        shadow-mapSize={[2048, 2048]}
       >
         <orthographicCamera attach="shadow-camera" args={[-100, 100, 100, -100]} />
       </directionalLight>
     </>
-  )
+  );
 }
 
 function ResponsiveCamera() {
   const { camera, size } = useThree();
 
   useFrame(() => {
-    // Only adjust FOV for PerspectiveCamera
-    if ('fov' in camera) {
-      const aspect = size.width / size.height;
+    if (!("fov" in camera)) return;
+    const aspect = size.width / size.height;
 
-      // Target values based on aspect ratio
-      // Wide screen (Desktop): aspect ~1.77 -> FOV 45, Z 25
-      // Square (Tablet): aspect ~1.0 -> FOV 55, Z 28
-      // Tall screen (Mobile): aspect ~0.5 -> FOV 75, Z 35
+    let targetFov = 45;
+    let targetZ = 25;
+    let targetY = 6;
 
-      // Interpolation factor based on aspect ratio range [0.5, 2.0]
-      // We assume typical range is 0.5 (mobile) to 1.8 (desktop)
-
-      let targetFov = 45;
-      let targetZ = 25;
-      let targetY = 6;
-
-      if (aspect < 1.0) {
-        // Linearly interpolate between Mobile (0.5) and Square (1.0)
-        // t = 0 (at 0.5) to 1 (at 1.0)
-        const t = Math.min(Math.max((aspect - 0.5) / 0.5, 0), 1);
-        targetFov = THREE.MathUtils.lerp(75, 55, t);
-        targetZ = THREE.MathUtils.lerp(35, 28, t);
-        targetY = THREE.MathUtils.lerp(9, 7, t);
-      } else {
-        // Linearly interpolate between Square (1.0) and Wide (1.8)
-        const t = Math.min(Math.max((aspect - 1.0) / 0.8, 0), 1);
-        targetFov = THREE.MathUtils.lerp(55, 45, t);
-        targetZ = THREE.MathUtils.lerp(28, 25, t);
-        targetY = THREE.MathUtils.lerp(7, 6, t);
-      }
-
-      // Smooth damping
-      camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
-      camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.1);
-      camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.1);
-
-      camera.updateProjectionMatrix();
+    if (aspect < 1.0) {
+      const t = Math.min(Math.max((aspect - 0.5) / 0.5, 0), 1);
+      targetFov = THREE.MathUtils.lerp(75, 55, t);
+      targetZ = THREE.MathUtils.lerp(35, 28, t);
+      targetY = THREE.MathUtils.lerp(9, 7, t);
+    } else {
+      const t = Math.min(Math.max((aspect - 1.0) / 0.8, 0), 1);
+      targetFov = THREE.MathUtils.lerp(55, 45, t);
+      targetZ = THREE.MathUtils.lerp(28, 25, t);
+      targetY = THREE.MathUtils.lerp(7, 6, t);
     }
+
+    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.1);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.1);
+    camera.updateProjectionMatrix();
   });
 
   return null;
 }
 
+const CLEAR_FOG = new THREE.Color("#c7d5ff");
+const TOXIC_FOG = new THREE.Color("#2a0303");
+
 function ReactiveFog() {
-  const stress = useStore(s => s.stressLevel);
+  const { scene } = useThree();
+  const fogRef = useRef<THREE.Fog | null>(null);
 
-  // Fog logic:
-  // Low Stress (High Water) -> Clear View (fog far away)
-  // High Stress (Low Water) -> Dense Fog (fog close)
-  const near = 20 - (stress * 18); // 20 -> 2
-  const far = 120 - (stress * 90); // 120 -> 30
-  const color = '#e0e7ff';
+  useEffect(() => {
+    const fog = new THREE.Fog(CLEAR_FOG.clone(), 20, 120);
+    fogRef.current = fog;
+    scene.fog = fog;
+    return () => { scene.fog = null; };
+  }, [scene]);
 
-  return <fog attach="fog" args={[color, near, far]} />;
+  useFrame(() => {
+    if (!fogRef.current) return;
+    const s = useStore.getState().stressLevel;
+    fogRef.current.near = 20 - s * 18;
+    fogRef.current.far = Math.max(30, 120 - s * 90);
+    fogRef.current.color.lerpColors(CLEAR_FOG, TOXIC_FOG, s);
+  });
+
+  return null;
 }
 
-export default function Home() {
-  const [cinematicMode, setCinematicMode] = React.useState(true);
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-  React.useEffect(() => {
+export default function Home() {
+  const [cinematicMode, setCinematicMode] = useState(true);
+  const [introComplete, setIntroComplete] = useState(false);
+  const hasReachedMax = useStore((s) => s.hasReachedMax);
+  const reset = useStore((s) => s.reset);
+
+  // Keyboard shortcuts
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'c') {
-        setCinematicMode((prev) => !prev);
-      }
+      if (!introComplete) return;
+      const key = e.key.toLowerCase();
+      if (key === "c") setCinematicMode((p) => !p);
+      if (key === "r") reset();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [introComplete, reset]);
+
+  // After hydration from localStorage, ensure stressLevel reflects persisted scar.
+  useEffect(() => {
+    const { permanentDamage, stressLevel } = useStore.getState();
+    if (permanentDamage > stressLevel) {
+      useStore.setState({ stressLevel: permanentDamage });
+    }
+  }, []);
+
+  const handleIntroStart = useCallback(() => {
+    setIntroComplete(true);
+  }, []);
+
+  const toggleCinematic = useCallback(() => {
+    setCinematicMode((p) => !p);
   }, []);
 
   return (
-    <main className="relative w-screen h-screen bg-black overflow-hidden select-none">
+    <main className="relative w-screen h-screen bg-[#020617] overflow-hidden select-none">
       <SoundManager />
+      <FaviconManager />
+      <CustomCursor />
 
+      {/* ── 3D Canvas ─────────────────────────────────────────────────────── */}
       <div className="absolute inset-0 z-0 w-full h-full">
+        <ErrorBoundary>
         <Canvas
           className="w-full h-full"
           camera={{ position: [0, 6, 25], fov: 45 }}
           shadows
+          gl={{
+            antialias: true,
+            powerPreference: "high-performance",
+            preserveDrawingBuffer: true, // required for canvas screenshot
+          }}
         >
-          <color attach="background" args={['#e0e7ff']} />
           <ReactiveFog />
-
           <SceneLight />
-          {/* Default Responsive Camera (disabled in Cinematic Mode) */}
-          {!cinematicMode && <ResponsiveCamera />}
 
-          {/* Cinematic Mode Camera */}
+          {!cinematicMode && <ResponsiveCamera />}
           {cinematicMode && <CinematicCamera active={cinematicMode} />}
 
-          <Environment preset="forest" background={false} />
-
-          <Terrain />
-          <River />
-          <Decorations />
-          <Forest />
-          <Animals />
-          <Birds />
+          <Suspense fallback={null}>
+            <ReactiveSky />
+            <Environment preset="forest" background={false} />
+            <Terrain />
+            <River />
+            <Decorations />
+            <Forest />
+            <Animals />
+            <Birds />
+          </Suspense>
 
           <ContactShadows
             opacity={0.4}
@@ -151,22 +188,33 @@ export default function Home() {
             color="#000000"
           />
 
-          <EffectComposer>
-            <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} intensity={0.5} />
-            <Noise opacity={0.02} />
-            <Vignette eskil={false} offset={0.1} darkness={1.1} />
-          </EffectComposer>
-
-          {/* PHASE 3: PARTICULES DE CENDRE */}
           <AshParticles />
-
+          <AcidRain />
+          <FireParticles />
           <ImmersionEffects />
         </Canvas>
+        </ErrorBoundary>
       </div>
 
+      {/* ── HTML Overlay Layer ────────────────────────────────────────────── */}
       <div className="absolute inset-0 z-10 w-full h-full pointer-events-none">
-        <PromptInput />
+        {introComplete && (
+          <>
+            <NarrativeMessages />
+            <GlobalCO2Ticker />
+            <PromptInput
+              cinematicMode={cinematicMode}
+              onToggleCinematic={toggleCinematic}
+            />
+            <HelpPanel />
+          </>
+        )}
       </div>
+
+      {/* ── Modals & screens ─────────────────────────────────────────────── */}
+      <LoadingScreen />
+      <IntroScreen onStart={handleIntroStart} />
+      <EndScreen visible={hasReachedMax && introComplete} />
     </main>
   );
 }

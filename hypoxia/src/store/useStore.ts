@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 export const MAX_TOKENS = 60;
@@ -7,67 +8,103 @@ const CRITICAL_THRESHOLD = 0.75;
 const DAMAGE_INCREMENT = 0.002;
 const MAX_PERMANENT_DAMAGE = 0.5;
 
+/**
+ * CO₂ equivalent per character typed.
+ * Based on LLM energy estimates: ~0.003 kWh/1000 tokens × 400g CO₂/kWh ≈ 0.005g/token.
+ * Displayed in milligrams for legibility at low usage.
+ */
+const CO2_PER_CHAR_G = 0.005;
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface HypoxiaState {
-  /** Current prompt text entered by the user. */
   promptText: string;
-  /**
-   * Effective stress level exposed to components.
-   * Always >= permanentDamage (the system never fully heals).
-   * Range: [0, 1].
-   */
   stressLevel: number;
-
   /**
    * Ecological scar — "L'Écho".
-   * Accumulates irreversibly when the system enters the critical zone (> 0.75).
-   * Capped at MAX_PERMANENT_DAMAGE (0.5).
+   * Accumulates irreversibly when stress > 0.75.
+   * Capped at MAX_PERMANENT_DAMAGE (0.5). The system never fully heals.
    */
   permanentDamage: number;
-
-  /** Hard token/character limit before system "death". */
   maxTokens: number;
+  /** Cumulative characters typed this session (deletions do not subtract). */
+  totalCharsTyped: number;
+  /** Cumulative CO₂ equivalent in grams for this session. */
+  co2Grams: number;
+  /** True when the prompt has reached the hard limit — triggers the end screen. */
+  hasReachedMax: boolean;
 
-  // ── Actions ──────────────────────────────────────────────────────────────
   setPrompt: (text: string) => void;
+  /** Soft reset: clears text but preserves permanent damage and session CO₂. */
   reset: () => void;
+  /** Hard reset: wipes everything including permanent damage (new session). */
+  hardReset: () => void;
 }
 
-// ─── Initial values ──────────────────────────────────────────────────────────
-const initialState = {
+// ─── Store ───────────────────────────────────────────────────────────────────
+export const useStore = create<HypoxiaState>()(persist((set, get) => ({
   promptText: "",
   stressLevel: 0,
   permanentDamage: 0,
   maxTokens: MAX_TOKENS,
-} as const;
-
-// ─── Store ───────────────────────────────────────────────────────────────────
-export const useStore = create<HypoxiaState>()((set, get) => ({
-  ...initialState,
+  totalCharsTyped: 0,
+  co2Grams: 0,
+  hasReachedMax: false,
 
   setPrompt: (text: string) => {
-    const { permanentDamage: prevDamage } = get();
+    const { permanentDamage: prevDamage, totalCharsTyped, promptText } = get();
 
-    // 1. Raw stress based purely on character count
     const rawStress = Math.min(text.length / MAX_TOKENS, 1);
 
-    // 2. "L'Écho" — accumulate permanent damage while in the critical zone
     let nextDamage = prevDamage;
     if (rawStress > CRITICAL_THRESHOLD) {
       nextDamage = Math.min(prevDamage + DAMAGE_INCREMENT, MAX_PERMANENT_DAMAGE);
     }
 
-    // 3. Display rule: stress never drops below the scar
-    //    The system never fully heals.
     const effectiveStress = Math.min(Math.max(rawStress, nextDamage), 1);
+
+    // Only new characters count toward CO₂ — deletions don't "give back" energy.
+    const newChars = Math.max(0, text.length - promptText.length);
+    const nextTotal = totalCharsTyped + newChars;
 
     set({
       promptText: text,
       stressLevel: effectiveStress,
       permanentDamage: nextDamage,
+      totalCharsTyped: nextTotal,
+      co2Grams: nextTotal * CO2_PER_CHAR_G,
+      hasReachedMax: text.length >= MAX_TOKENS,
     });
   },
 
-  /** Full reset — wipes text, stress, AND permanent damage. */
-  reset: () => set({ ...initialState }),
+  reset: () => {
+    const { permanentDamage, totalCharsTyped, co2Grams } = get();
+    set({
+      promptText: "",
+      stressLevel: permanentDamage,
+      permanentDamage,
+      maxTokens: MAX_TOKENS,
+      totalCharsTyped,
+      co2Grams,
+      hasReachedMax: false,
+    });
+  },
+
+  hardReset: () =>
+    set({
+      promptText: "",
+      stressLevel: 0,
+      permanentDamage: 0,
+      maxTokens: MAX_TOKENS,
+      totalCharsTyped: 0,
+      co2Grams: 0,
+      hasReachedMax: false,
+    }),
+}), {
+  name: "hypoxia-echo",
+  // Only persist the "scar" — the ecological damage that outlasts the session.
+  partialize: (state) => ({
+    permanentDamage: state.permanentDamage,
+    totalCharsTyped: state.totalCharsTyped,
+    co2Grams: state.co2Grams,
+  }),
 }));
