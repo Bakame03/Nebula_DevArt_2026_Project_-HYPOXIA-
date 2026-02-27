@@ -32,40 +32,15 @@ function createPinkNoiseBuffer(ctx: AudioContext, duration = 3): AudioBuffer {
   return buf;
 }
 
-/**
- * Heartbeat buffer — damped-oscillator synthesis (60 BPM base, 1 s cycle).
- *
- * A·cos(2πf·t)·exp(-t/τ): starts at peak amplitude immediately (no ramp),
- * decays naturally — the physics of a drumhead. Clear, organic "thud".
- *
- * Lub 0.05 s: 62 Hz, τ=28 ms — deep, punchy (mitral closure)
- * Dub 0.27 s: 80 Hz, τ=20 ms — higher, shorter (aortic closure)
- */
-function createHeartbeatBuffer(ctx: AudioContext): AudioBuffer {
-  const sr = ctx.sampleRate;
-  const buf = ctx.createBuffer(1, sr, sr);
-  const d = buf.getChannelData(0);
-
-  const thud = (
-    i: number,
-    startSec: number,
-    freq: number,
-    amp: number,
-    tauSec: number,
-  ) => {
-    const s = Math.floor(startSec * sr);
-    if (i < s) return 0;
-    const t = (i - s) / sr;
-    if (t > tauSec * 7) return 0;
-    return amp * Math.cos(2 * Math.PI * freq * t) * Math.exp(-t / tauSec);
-  };
-
-  for (let i = 0; i < d.length; i++) {
-    const lub = thud(i, 0.05, 62, 0.95, 0.028);
-    const dub = thud(i, 0.27, 80, 0.62, 0.020);
-    d[i] = clamp(lub + dub, -1, 1);
+/** Fetch and decode a real audio file using Web Audio API. */
+async function loadAudioBuffer(ctx: AudioContext, url: string): Promise<AudioBuffer | null> {
+  try {
+    const res = await fetch(url);
+    const raw = await res.arrayBuffer();
+    return await ctx.decodeAudioData(raw);
+  } catch {
+    return null;
   }
-  return buf;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -103,7 +78,7 @@ export default function SoundManager() {
   const curHeartRate = useRef(1.0);
   const curAlertVol = useRef(0.0);
 
-  const buildAudio = useCallback(() => {
+  const buildAudio = useCallback(async () => {
     if (started.current) return;
     started.current = true;
 
@@ -152,21 +127,25 @@ export default function SoundManager() {
       return { osc, gain, freq, speed: 0.4 + Math.random() * 0.8, phase: i * 1.05 };
     });
 
-    // ── Heartbeat ───────────────────────────────────────────────────────────
-    const heartBuf = createHeartbeatBuffer(ctx);
-    const heartSrc = ctx.createBufferSource();
-    heartSrc.buffer = heartBuf;
-    heartSrc.loop = true;
-    heartSrc.playbackRate.value = 1.0; // 60 BPM base
-    heartSourceRef.current = heartSrc;
-
+    // ── Heartbeat — real audio file ─────────────────────────────────────────
+    // Load the actual recorded heartbeat (heartbeat_heavy.mp3).
+    // playbackRate controls the BPM: 1.0 = native speed (≈60 BPM),
+    // increasing toward 2.0 at max stress (≈120 BPM).
     const heartGain = ctx.createGain();
     heartGain.gain.value = 0;
     heartGainRef.current = heartGain;
-
-    heartSrc.connect(heartGain);
     heartGain.connect(ctx.destination);
-    heartSrc.start();
+
+    const heartBuf = await loadAudioBuffer(ctx, "/sounds/heartbeat_heavy.mp3");
+    if (heartBuf) {
+      const heartSrc = ctx.createBufferSource();
+      heartSrc.buffer = heartBuf;
+      heartSrc.loop = true;
+      heartSrc.playbackRate.value = 1.0;
+      heartSourceRef.current = heartSrc;
+      heartSrc.connect(heartGain);
+      heartSrc.start();
+    }
 
     // ── Alert ────────────────────────────────────────────────────────────────
     const alertOsc = ctx.createOscillator();
@@ -213,20 +192,22 @@ export default function SoundManager() {
         b.gain.gain.value = chirp * 0.6;
       });
 
-      // Heartbeat: fade in earlier (stress > 0.05), speed up proportionally
-      const heartStress = clamp((stress - 0.05) / 0.95, 0, 1);
-      const hvTarget = heartStress ** 1.5; // less aggressive curve — audible earlier
-      const hrTarget = 1.0 + heartStress * 1.2; // 60 → 132 BPM max
+      // Heartbeat: real file — fade in from stress 0, speed up with stress
+      const heartSrc = heartSourceRef.current;
+      const heartStress = clamp(stress / 1.0, 0, 1);
+      // Volume: gentle curve, audible from very low stress
+      const hvTarget = Math.pow(heartStress, 1.2) * 0.85;
+      // Rate: native speed at 0 stress, up to ×1.8 at max (≈108 BPM if file is 60 BPM)
+      const hrTarget = 1.0 + heartStress * 0.8;
       curHeartVol.current = lerp(curHeartVol.current, hvTarget, SPEED);
       curHeartRate.current = lerp(curHeartRate.current, hrTarget, SPEED);
       heartGain.gain.value = curHeartVol.current;
-      heartSrc.playbackRate.value = curHeartRate.current;
+      if (heartSrc) heartSrc.playbackRate.value = curHeartRate.current;
 
       // Alert: only at full saturation
       const avTarget = stress >= 1.0 ? 0.7 : 0;
       curAlertVol.current = lerp(curAlertVol.current, avTarget, SPEED * 3);
       alertGain.gain.value = curAlertVol.current;
-      // Frequency sweep for siren effect
       alertOsc.frequency.value = 380 + Math.sin(t * 2) * 80;
 
       rafRef.current = requestAnimationFrame(() => update(1 / 60));
