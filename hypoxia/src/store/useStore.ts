@@ -5,8 +5,15 @@ import { persist } from "zustand/middleware";
 export const MAX_TOKENS = 60;
 export const DEAD_TREE_THRESHOLD = 45;
 const CRITICAL_THRESHOLD = 0.75;
-const DAMAGE_INCREMENT = 0.002;
-const MAX_PERMANENT_DAMAGE = 0.5;
+/**
+ * Permanent damage accrued per character typed above the critical threshold.
+ * Tuned so that pushing a single prompt to the hard limit (≈15 critical
+ * characters) leaves a visible scar of ~0.30 — i.e. one careless prompt
+ * already costs an eco-grade of "D". Repeat sessions compound toward "F".
+ */
+const DAMAGE_INCREMENT = 0.02;
+/** The scar can reach total ecological death; it never heals back down. */
+const MAX_PERMANENT_DAMAGE = 1.0;
 
 /**
  * CO₂ equivalent per character typed.
