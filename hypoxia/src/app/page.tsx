@@ -2,7 +2,7 @@
 import React, { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { Environment, ContactShadows } from "@react-three/drei";
+import { Environment, ContactShadows, PerformanceMonitor } from "@react-three/drei";
 import { useStore } from "@/store/useStore";
 import PromptInput from "@/components/ui/PromptInput";
 import SoundManager from "@/components/audio/SoundManager";
@@ -116,6 +116,11 @@ function ReactiveFog() {
 export default function Home() {
   const [cinematicMode, setCinematicMode] = useState(true);
   const [introComplete, setIntroComplete] = useState(false);
+  // Adaptive resolution ceiling. dpr={[1, dprMax]} clamps to the device's real
+  // pixel ratio but never exceeds dprMax — caps high-DPR phones (were rendering
+  // at ~3×) without supersampling DPR-1 laptops. PerformanceMonitor lowers it
+  // when the framerate drops; the fallback floor stops it oscillating.
+  const [dprMax, setDprMax] = useState(2);
   const hasReachedMax = useStore((s) => s.hasReachedMax);
   const reset = useStore((s) => s.reset);
 
@@ -158,6 +163,7 @@ export default function Home() {
         <ErrorBoundary>
         <Canvas
           className="w-full h-full"
+          dpr={[1, dprMax]}
           camera={{ position: [0, 6, 25], fov: 45 }}
           shadows
           gl={{
@@ -166,6 +172,13 @@ export default function Home() {
             preserveDrawingBuffer: true, // required for canvas screenshot
           }}
         >
+          {/* Adaptive resolution: drop the DPR ceiling when fps sags, with a
+              hard floor (1.0) after repeated declines so it can't oscillate. */}
+          <PerformanceMonitor
+            flipflops={3}
+            onChange={({ factor }) => setDprMax(Math.round((1 + factor) * 2) / 2)}
+            onFallback={() => setDprMax(1)}
+          />
           <ReactiveFog />
           <SceneLight />
 
