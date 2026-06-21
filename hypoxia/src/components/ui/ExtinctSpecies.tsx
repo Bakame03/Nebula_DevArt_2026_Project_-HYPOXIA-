@@ -38,7 +38,7 @@ export default function ExtinctSpecies() {
   if (stressLevel < 0.05) return null;
 
   return (
-    <div className="pointer-events-none fixed left-6 top-1/2 -translate-y-1/2 z-40">
+    <div className="pointer-events-none fixed left-6 top-1/2 -translate-y-1/2 z-40 hidden md:block">
       <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "210px" }}>
         {/* Header */}
         <div style={{

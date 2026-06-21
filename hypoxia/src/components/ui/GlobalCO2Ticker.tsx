@@ -41,7 +41,7 @@ export default function GlobalCO2Ticker() {
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 2, duration: 0.8 }}
-      className="pointer-events-none fixed right-6 top-6 z-40 flex flex-col items-end gap-0.5"
+      className="pointer-events-none fixed right-6 top-6 z-40 hidden md:flex flex-col items-end gap-0.5"
     >
       <span className="text-[8px] font-bold uppercase tracking-[0.35em] text-white/20">
         IA mondiale · CO₂ session

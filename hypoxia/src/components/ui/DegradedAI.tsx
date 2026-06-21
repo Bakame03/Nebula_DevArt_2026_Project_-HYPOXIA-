@@ -153,7 +153,7 @@ export default function DegradedAI() {
               border: `1px solid ${accent}25`,
               borderRadius: "14px",
               padding: "10px 18px 12px",
-              maxWidth: "500px",
+              maxWidth: "min(90vw, 500px)",
               width: "max-content",
               boxShadow: `0 0 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03)`,
             }}

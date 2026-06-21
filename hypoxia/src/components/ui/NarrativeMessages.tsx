@@ -96,7 +96,7 @@ export default function NarrativeMessages() {
   const accent = active ? accentColors[active.index] : "#00ffaa";
 
   return (
-    <div className="pointer-events-none fixed right-6 top-1/3 z-40 -translate-y-1/2">
+    <div className="pointer-events-none fixed right-6 top-1/3 z-40 -translate-y-1/2 hidden md:block">
       <AnimatePresence mode="wait">
         {active && (
           <motion.div
