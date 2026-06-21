@@ -1,14 +1,34 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useProgress } from "@react-three/drei";
 import { motion, AnimatePresence } from "framer-motion";
 
+// If loading makes no further progress for this long, assume an asset stalled
+// (a hung request, or a texture that will never resolve) and let the user
+// through rather than trapping them on the loader forever.
+const STALL_TIMEOUT_MS = 12000;
+
 export default function LoadingScreen() {
-  const { progress, active } = useProgress();
+  const { progress, active, errors } = useProgress();
+  const [gaveUp, setGaveUp] = useState(false);
+
+  // Stall watchdog: the timer is reset every time progress advances, so a slow
+  // but still-progressing load is never cut off — only a frozen one is.
+  const lastProgress = useRef(progress);
+  useEffect(() => {
+    if (!active) return;
+    lastProgress.current = progress;
+    const id = setTimeout(() => setGaveUp(true), STALL_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [progress, active]);
+
+  // A reported load error means we'll never reach 100%, so don't keep waiting.
+  const visible = active && !gaveUp && errors.length === 0;
 
   return (
     <AnimatePresence>
-      {active && (
+      {visible && (
         <motion.div
           key="loader"
           initial={{ opacity: 1 }}
