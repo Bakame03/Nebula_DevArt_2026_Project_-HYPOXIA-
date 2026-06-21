@@ -96,18 +96,17 @@ export default function Forest() {
     });
 
     meshRef.current.instanceMatrix.needsUpdate = true;
-
-    // Reactively update the material color for progressive death tint
-    const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-    mat.color.copy(treeColor);
-    mat.map = useDeadTexture ? deadTreeTexture : treeTexture;
-    mat.needsUpdate = true;
   });
 
+  // Colour tint and the alive/dead texture swap are driven by props: the
+  // component already re-renders whenever promptText changes (which is the only
+  // thing that moves deathFactor), so R3F updates the material reactively. Doing
+  // this per-frame in useFrame — with mat.needsUpdate = true every frame — forced
+  // a needless material/uniform re-upload on every single frame.
   return (
     <instancedMesh ref={meshRef} args={[planeGeo, undefined, trees.length]}>
       <meshStandardMaterial
-        map={treeTexture}
+        map={useDeadTexture ? deadTreeTexture : treeTexture}
         color={treeColor}
         alphaTest={0.5}
         transparent
