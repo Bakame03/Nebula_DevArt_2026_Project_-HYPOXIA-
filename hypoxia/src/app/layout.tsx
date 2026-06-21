@@ -5,6 +5,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  // Resolves relative OG/Twitter image URLs to absolute ones (deterministic
+  // instead of inferred from the request host).
+  metadataBase: new URL("https://nebula-gray-seven.vercel.app"),
   title: "HYPOXIA | L'Écho Numérique",
   description:
     "Une installation d'art interactif qui visualise l'impact environnemental de l'IA générative. Chaque mot tapé consume de l'énergie — regardez l'écosystème mourir en temps réel.",

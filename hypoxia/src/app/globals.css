@@ -17,7 +17,8 @@ body {
   cursor: none;
 }
 
-/* Restore cursor on interactive elements so text caret stays visible */
+/* Hide the native I-beam over the textarea too, so only the custom animated
+   cursor shows while typing (see CustomCursor). */
 textarea {
   cursor: none;
 }
