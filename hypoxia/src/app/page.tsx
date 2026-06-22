@@ -1,5 +1,5 @@
 "use client";
-import React, { Suspense, useState, useEffect, useCallback, useRef } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Environment, ContactShadows, PerformanceMonitor } from "@react-three/drei";
