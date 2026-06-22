@@ -7,6 +7,7 @@ import { BlendFunction } from 'postprocessing';
 import type { VignetteEffect } from 'postprocessing';
 import * as THREE from 'three';
 import { useStore } from '@/store/useStore';
+import { bpmFromStress, beatEnvelope } from '@/utils/heartbeat';
 
 export default function ImmersionEffects() {
     const stressLevel = useStore((state) => state.stressLevel);
@@ -17,18 +18,14 @@ export default function ImmersionEffects() {
     useFrame((state) => {
         const t = state.clock.elapsedTime;
 
-        // Heartbeat shape: two sharp gaussian peaks (lub + dub) then silence
-        // Much more realistic than a continuous sine wave
-        const heartStress = Math.max(0, Math.min(1, (stressLevel - 0.15) / 0.85));
-        const bpm = 55 + heartStress * 75; // 55 → 130 BPM
-        const period = 60 / bpm; // seconds per beat
+        // Beat timing comes from the shared heartbeat model so the vignette
+        // pulse stays locked to the same BPM as the EKG, the readout and the audio.
+        const period = 60 / bpmFromStress(stressLevel); // seconds per beat
         const phase = (t % period) / period; // 0..1 within beat cycle
+        const beat = beatEnvelope(phase);
 
-        // Lub: gaussian peak at phase 0.08, dub at phase 0.22
-        const lub = Math.exp(-Math.pow((phase - 0.08) / 0.030, 2));
-        const dub = Math.exp(-Math.pow((phase - 0.22) / 0.025, 2)) * 0.55;
-        const beat = Math.min(1, lub + dub);
-
+        // pulseStrength fades the throb in only once stress is meaningful.
+        const heartStress = Math.max(0, Math.min(1, (stressLevel - 0.15) / 0.85));
         const baseDarkness = 0.38 + stressLevel * 0.28;
         const pulseStrength = heartStress * 0.18;
 

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useCallback } from "react";
 import { useStore } from "@/store/useStore";
+import { playbackRateFromStress } from "@/utils/heartbeat";
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function lerp(a: number, b: number, t: number) {
@@ -197,8 +198,9 @@ export default function SoundManager() {
       const heartStress = clamp(stress / 1.0, 0, 1);
       // Volume: gentle curve, audible from very low stress
       const hvTarget = Math.pow(heartStress, 1.2) * 0.85;
-      // Rate: native speed at 0 stress, up to ×1.8 at max (≈108 BPM if file is 60 BPM)
-      const hrTarget = 1.0 + heartStress * 0.8;
+      // Rate: derived from the shared heartbeat model so the audio beats at the
+      // same BPM shown on the EKG / readout (1.0 when calm → BPM_MAX/file BPM).
+      const hrTarget = playbackRateFromStress(stress);
       curHeartVol.current = lerp(curHeartVol.current, hvTarget, SPEED);
       curHeartRate.current = lerp(curHeartRate.current, hrTarget, SPEED);
       heartGain.gain.value = curHeartVol.current;

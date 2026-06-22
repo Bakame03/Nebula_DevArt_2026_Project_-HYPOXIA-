@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useStore } from "@/store/useStore";
+import { bpmFromStress } from "@/utils/heartbeat";
 
 const W = 140;
 const H = 32;
@@ -70,7 +71,7 @@ export default function HeartbeatMonitor() {
       prevTsRef.current = ts;
 
       const stress = useStore.getState().stressLevel;
-      const bpm = 55 + stress * 75; // 55 → 130 BPM
+      const bpm = bpmFromStress(stress);
 
       // Advance beat phase by dt * beats_per_second
       phaseAccRef.current = (phaseAccRef.current + dt * (bpm / 60)) % 1;

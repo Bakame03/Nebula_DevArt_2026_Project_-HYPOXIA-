@@ -4,6 +4,7 @@ import { useRef, useCallback } from "react";
 import type { Variants } from "framer-motion";
 import { motion } from "framer-motion";
 import { useStore } from "@/store/useStore";
+import { bpmFromStress } from "@/utils/heartbeat";
 import HeartbeatMonitor from "./HeartbeatMonitor";
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
@@ -304,7 +305,7 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
                     : "rgba(255,255,255,0.3)",
                 }}
               >
-                {Math.round(60 + stressLevel * 72)}
+                {Math.round(bpmFromStress(stressLevel))}
               </span>
               <span className="text-[6px] md:text-[7px] font-bold uppercase tracking-widest text-white/15">
                 BPM
