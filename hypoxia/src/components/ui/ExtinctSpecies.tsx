@@ -72,7 +72,7 @@ export default function ExtinctSpecies() {
               {/* Pulse dot */}
               <motion.div
                 animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 1.2 + Math.random(), repeat: Infinity }}
+                transition={{ duration: 1.2 + sp.disappearAt, repeat: Infinity }}
                 style={{
                   width: 4, height: 4, borderRadius: "50%", flexShrink: 0,
                   backgroundColor: sp.extinct ? "#ff6b35" : "#00ffaa",

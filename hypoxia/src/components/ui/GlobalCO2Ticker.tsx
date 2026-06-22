@@ -24,7 +24,8 @@ function formatDuration(secs: number): string {
 
 export default function GlobalCO2Ticker() {
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef(Date.now());
+  // Set on mount in the effect below — not during render (Date.now is impure).
+  const startRef = useRef(0);
 
   useEffect(() => {
     startRef.current = Date.now();
