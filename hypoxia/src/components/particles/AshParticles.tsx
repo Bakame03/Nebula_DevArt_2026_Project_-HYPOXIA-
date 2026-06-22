@@ -1,6 +1,6 @@
 "use client";
 import { useStore } from "@/store/useStore";
-import { useRef, useMemo, useEffect } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import seededRandom from "@/utils/seededRandom";
