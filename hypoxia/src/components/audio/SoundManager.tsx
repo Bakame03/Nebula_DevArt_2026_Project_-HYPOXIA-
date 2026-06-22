@@ -47,8 +47,12 @@ async function loadAudioBuffer(ctx: AudioContext, url: string): Promise<AudioBuf
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function SoundManager() {
   const stressLevel = useStore((s) => s.stressLevel);
+  // Mirror the latest stress into a ref so the rAF loop can read it without
+  // re-subscribing. Updated in an effect, not during render.
   const stressRef = useRef(stressLevel);
-  stressRef.current = stressLevel;
+  useEffect(() => {
+    stressRef.current = stressLevel;
+  }, [stressLevel]);
 
   const ctxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
