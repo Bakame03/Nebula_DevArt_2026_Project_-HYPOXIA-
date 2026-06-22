@@ -6,7 +6,6 @@ import * as THREE from "three";
 import seededRandom from "@/utils/seededRandom";
 
 export default function AshParticles() {
-    const { permanentDamage } = useStore();
     const meshRef = useRef<THREE.InstancedMesh>(null);
     const rng = useMemo(() => new seededRandom(999), []);
 
@@ -31,6 +30,8 @@ export default function AshParticles() {
 
     useFrame((state, delta) => {
         if (!meshRef.current) return;
+
+        const permanentDamage = useStore.getState().permanentDamage;
 
         // Only render if there is some damage (Ash starts falling when world is hurt)
         // Scale opacity instead of hiding to keep loop simple

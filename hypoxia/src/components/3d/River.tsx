@@ -7,7 +7,6 @@ import { riverCurve } from "@/utils/terrainLogic";
 import { useStore } from "@/store/useStore";
 
 export default function River() {
-  const { stressLevel } = useStore();
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
 
@@ -35,12 +34,14 @@ export default function River() {
 
   // ── Animation Loop ────────────────────────────────────────────────────
   useFrame((_, delta) => {
+    const stress = useStore.getState().stressLevel;
+
     // 1. Animate texture offset → flowing water illusion
     waterNormals.offset.x += delta * 0.10;
 
     // 2. Update material color based on stress
     if (materialRef.current) {
-      currentColor.copy(cleanColor).lerp(stressColor, stressLevel);
+      currentColor.copy(cleanColor).lerp(stressColor, stress);
       materialRef.current.color.copy(currentColor);
     }
 
@@ -51,7 +52,7 @@ export default function River() {
 
       // Drought effect: water level drops with stress
       // Level -1.5 (High) → -3.5 (Low)
-      meshRef.current.position.y = -1.5 - stressLevel * 2.0;
+      meshRef.current.position.y = -1.5 - stress * 2.0;
     }
   });
 

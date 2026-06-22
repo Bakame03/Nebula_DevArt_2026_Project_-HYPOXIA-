@@ -9,7 +9,6 @@ import seededRandom from "@/utils/seededRandom";
 const tempObject = new THREE.Object3D();
 
 export default function Birds() {
-    const { stressLevel } = useStore();
     const skyBirdsMesh = useRef<THREE.InstancedMesh>(null);
 
     const SKY_BIRD_COUNT = 50;
@@ -41,6 +40,7 @@ export default function Birds() {
     useFrame((state) => {
         if (!skyBirdsMesh.current) return;
 
+        const stressLevel = useStore.getState().stressLevel;
         const time = state.clock.getElapsedTime();
         const camera = state.camera;
 

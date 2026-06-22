@@ -1,7 +1,6 @@
 "use client";
 import { useStore } from "@/store/useStore";
 import { useRef, useMemo, useLayoutEffect } from "react";
-import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
 import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
@@ -10,7 +9,8 @@ import seededRandom from "@/utils/seededRandom";
 const tempObject = new THREE.Object3D();
 
 export default function Decorations() {
-    const { stressLevel, permanentDamage } = useStore();
+    const stressLevel = useStore((s) => s.stressLevel);
+    const permanentDamage = useStore((s) => s.permanentDamage);
     const rockMesh = useRef<THREE.InstancedMesh>(null);
     const grassMesh = useRef<THREE.InstancedMesh>(null);
 
