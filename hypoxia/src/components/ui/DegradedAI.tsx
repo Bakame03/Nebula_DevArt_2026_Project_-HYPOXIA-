@@ -115,7 +115,6 @@ export default function DegradedAI() {
     }, DEBOUNCE_MS);
 
     return clear;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [promptText]);
 
   // Reset on hard reset
@@ -126,7 +125,6 @@ export default function DegradedAI() {
       setText(null);
       prevLen.current = 0;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stressLevel]);
 
   const accent =

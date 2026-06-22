@@ -85,7 +85,6 @@ export default function NarrativeMessages() {
       setActive(null);
       setVisibleChars(0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stressLevel]);
 
   const displayed = active ? active.text.slice(0, visibleChars) : "";
