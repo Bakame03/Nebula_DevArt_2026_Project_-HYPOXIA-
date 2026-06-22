@@ -5,6 +5,7 @@ import type { Variants } from "framer-motion";
 import { motion } from "framer-motion";
 import { useStore } from "@/store/useStore";
 import { bpmFromStress } from "@/utils/heartbeat";
+import { usePrefersReducedMotion } from "@/utils/usePrefersReducedMotion";
 import HeartbeatMonitor from "./HeartbeatMonitor";
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
@@ -112,7 +113,11 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
   const setPrompt = useStore((s) => s.setPrompt);
   const reset = useStore((s) => s.reset);
 
+  const reducedMotion = usePrefersReducedMotion();
   const isCritical = stressLevel > 0.8;
+  // When reduced motion is requested, keep the critical styling but stop the
+  // shaking bar and pulsing buttons.
+  const animateCritical = isCritical && !reducedMotion;
 
   const handleTextareaChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -159,7 +164,7 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
       <motion.div
         className="pointer-events-auto w-[90vw] max-w-[1100px]" // Very wide
         variants={shakeVariants}
-        animate={isCritical ? "shake" : "idle"}
+        animate={animateCritical ? "shake" : "idle"}
       >
         {/* ── Liquid Glass Bar ──────────────────────────────────────────── */}
         <div
@@ -222,7 +227,7 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
                   : "rgba(255,255,255,0.10)",
               }}
               variants={btnPulseVariants}
-              animate={isCritical ? "critical" : "idle"}
+              animate={animateCritical ? "critical" : "idle"}
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}
               aria-label="Ajouter un fichier"
@@ -281,7 +286,7 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
               className="relative z-10 flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
               style={{ backgroundColor: sendBtnBg }}
               variants={btnPulseVariants}
-              animate={isCritical ? "critical" : "idle"}
+              animate={animateCritical ? "critical" : "idle"}
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}
               aria-label="Envoyer"

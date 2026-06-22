@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useRef } from "react";
 import { useStore } from "@/store/useStore";
+import { usePrefersReducedMotion } from "@/utils/usePrefersReducedMotion";
 
 interface CinematicCameraProps {
   active: boolean;
@@ -11,6 +12,7 @@ interface CinematicCameraProps {
 export default function CinematicCamera({ active }: CinematicCameraProps) {
   const theta = useRef(0);
   const targetPos = useRef(new THREE.Vector3());
+  const reducedMotion = usePrefersReducedMotion();
 
   useFrame((state, delta) => {
     if (!active) return;
@@ -31,25 +33,30 @@ export default function CinematicCamera({ active }: CinematicCameraProps) {
 
     state.camera.position.lerp(targetPos.current, 0.05);
 
-    // ── Breathing — frequency and amplitude rise with heartbeat stress ────
-    // Calm: slow deep breaths (0.2 Hz). Panicked: rapid labored (1.5 Hz).
-    const breathStress = Math.max(0, stress - 0.1) / 0.9;
-    const breathFreq = 0.2 + breathStress * 1.3;
-    const breathAmp = 0.06 + breathStress * 0.22;
-    const breath = Math.sin(t * breathFreq * Math.PI * 2) * breathAmp;
-    state.camera.position.y += breath;
+    // Breathing, hyperventilation sway and shake are the vestibular-triggering
+    // motions — skip them entirely when the user prefers reduced motion, keeping
+    // only the gentle orbit so the scene is still readable in 3D.
+    if (!reducedMotion) {
+      // ── Breathing — frequency and amplitude rise with heartbeat stress ────
+      // Calm: slow deep breaths (0.2 Hz). Panicked: rapid labored (1.5 Hz).
+      const breathStress = Math.max(0, stress - 0.1) / 0.9;
+      const breathFreq = 0.2 + breathStress * 1.3;
+      const breathAmp = 0.06 + breathStress * 0.22;
+      const breath = Math.sin(t * breathFreq * Math.PI * 2) * breathAmp;
+      state.camera.position.y += breath;
 
-    // Lateral sway at very high stress — hyperventilation
-    if (stress > 0.7) {
-      const swayT = (stress - 0.7) / 0.3;
-      state.camera.position.x += Math.sin(t * 3.7 + 0.5) * 0.035 * swayT;
-    }
+      // Lateral sway at very high stress — hyperventilation
+      if (stress > 0.7) {
+        const swayT = (stress - 0.7) / 0.3;
+        state.camera.position.x += Math.sin(t * 3.7 + 0.5) * 0.035 * swayT;
+      }
 
-    // ── Shake at critical stress ──────────────────────────────────────────
-    const shakeIntensity = Math.max(0, (stress - 0.85) / 0.15) * 0.12;
-    if (shakeIntensity > 0) {
-      state.camera.position.x += Math.sin(t * 47.3) * shakeIntensity;
-      state.camera.position.y += Math.sin(t * 23.7 + 1.2) * shakeIntensity;
+      // ── Shake at critical stress ────────────────────────────────────────
+      const shakeIntensity = Math.max(0, (stress - 0.85) / 0.15) * 0.12;
+      if (shakeIntensity > 0) {
+        state.camera.position.x += Math.sin(t * 47.3) * shakeIntensity;
+        state.camera.position.y += Math.sin(t * 23.7 + 1.2) * shakeIntensity;
+      }
     }
 
     state.camera.lookAt(0, 2, 0);

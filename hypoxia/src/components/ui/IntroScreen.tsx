@@ -52,6 +52,37 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
             justifyContent: "center",
           }}
         >
+          {/* Skip — visitors arriving from a shared link can jump straight in
+              instead of waiting out the ~11s narrative. Hidden once the main
+              CTA appears, which does the same thing. */}
+          {!showButton && (
+            <motion.button
+              type="button"
+              onClick={handleStart}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              whileHover={{ opacity: 0.85 }}
+              transition={{ delay: 1.2, duration: 0.6 }}
+              style={{
+                position: "absolute",
+                bottom: "28px",
+                right: "32px",
+                background: "transparent",
+                border: "none",
+                color: "rgba(255,255,255,0.7)",
+                fontSize: "11px",
+                fontWeight: 600,
+                letterSpacing: "0.25em",
+                textTransform: "uppercase",
+                cursor: "none",
+                outline: "none",
+              }}
+              aria-label="Passer l'introduction"
+            >
+              Passer &rarr;
+            </motion.button>
+          )}
+
           {/* Subtle grid */}
           <div
             style={{

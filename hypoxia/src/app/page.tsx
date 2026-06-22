@@ -46,7 +46,9 @@ function SceneLight() {
         castShadow
         color="#fff7ed"
         shadow-bias={-0.0005}
-        shadow-mapSize={[2048, 2048]}
+        // 1024 is plenty for this scene's few shadow casters; halves the
+        // shadow-map memory/fill cost vs 2048, which matters on weak GPUs.
+        shadow-mapSize={[1024, 1024]}
       >
         <orthographicCamera attach="shadow-camera" args={[-100, 100, 100, -100]} />
       </directionalLight>

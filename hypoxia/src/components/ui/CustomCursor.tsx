@@ -25,6 +25,11 @@ export default function CustomCursor() {
     const ring = ringRef.current;
     if (!el || !dot || !ring) return;
 
+    // No custom cursor on touch devices: there's no pointer to follow, so skip
+    // the 60fps loop entirely (it would otherwise run for an invisible element
+    // and waste battery on phones).
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
     let raf: number;
     let hovering = false;
 

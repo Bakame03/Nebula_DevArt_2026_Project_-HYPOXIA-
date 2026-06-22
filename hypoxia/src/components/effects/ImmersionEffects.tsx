@@ -8,10 +8,12 @@ import type { VignetteEffect } from 'postprocessing';
 import * as THREE from 'three';
 import { useStore } from '@/store/useStore';
 import { bpmFromStress, beatEnvelope } from '@/utils/heartbeat';
+import { usePrefersReducedMotion } from '@/utils/usePrefersReducedMotion';
 
 export default function ImmersionEffects() {
     const stressLevel = useStore((state) => state.stressLevel);
     const permanentDamage = useStore((state) => state.permanentDamage);
+    const reducedMotion = usePrefersReducedMotion();
 
     const vignetteRef = useRef<VignetteEffect>(null);
 
@@ -30,7 +32,8 @@ export default function ImmersionEffects() {
         const pulseStrength = heartStress * 0.18;
 
         if (vignetteRef.current) {
-            vignetteRef.current.darkness = baseDarkness + beat * pulseStrength;
+            // Hold a steady vignette (no throb) when reduced motion is requested.
+            vignetteRef.current.darkness = baseDarkness + (reducedMotion ? 0 : beat * pulseStrength);
         }
     });
 
@@ -54,9 +57,11 @@ export default function ImmersionEffects() {
     // gate them on coarse thresholds — these flip at most a few times a session,
     // not per frame. Glitch mounts at 0.75, ahead of its 0.9 activation, so it's
     // already warm when the climax hits instead of hitching there.
+    // Chromatic aberration and the glitch are the most disorienting passes, so
+    // they're also dropped entirely under reduced motion.
     const showBloom = !lowPower && stressLevel > 0.12;
-    const showAberration = !lowPower && stressLevel > 0.6;
-    const showGlitch = !lowPower && stressLevel > 0.75;
+    const showAberration = !lowPower && !reducedMotion && stressLevel > 0.6;
+    const showGlitch = !lowPower && !reducedMotion && stressLevel > 0.75;
     const hasScar = permanentDamage > 0.001;
 
     // EffectComposer types its children as ReactElement[], so we build a keyed
