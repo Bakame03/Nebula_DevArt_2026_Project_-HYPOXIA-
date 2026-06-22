@@ -70,7 +70,7 @@ export default function Terrain() {
   });
 
   return (
-    <mesh ref={meshRef} geometry={geometry} receiveShadow>
+    <mesh ref={meshRef} geometry={geometry}>
       <meshStandardMaterial
         ref={materialRef}
         map={grassTexture}

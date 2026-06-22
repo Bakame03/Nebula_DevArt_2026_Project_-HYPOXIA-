@@ -61,7 +61,6 @@ export default function River() {
       ref={meshRef}
       geometry={geometry}
       rotation={[0, 0, 0]}
-      receiveShadow
     >
       <meshStandardMaterial
         ref={materialRef}

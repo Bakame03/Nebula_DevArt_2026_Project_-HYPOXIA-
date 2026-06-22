@@ -40,18 +40,15 @@ function SceneLight() {
   return (
     <>
       <ambientLight intensity={0.6 - stress * 0.3} color="#c7d2fe" />
+      {/* No castShadow: nothing in the scene casts into a directional shadow
+          map (trees/rocks/deer/birds are instanced with castShadow off), so the
+          real-time shadow pass produced nothing visible. Grounding comes from
+          <ContactShadows> instead. */}
       <directionalLight
         position={[-50, 40, -40]}
         intensity={2.5 - stress * 1.0}
-        castShadow
         color="#fff7ed"
-        shadow-bias={-0.0005}
-        // 1024 is plenty for this scene's few shadow casters; halves the
-        // shadow-map memory/fill cost vs 2048, which matters on weak GPUs.
-        shadow-mapSize={[1024, 1024]}
-      >
-        <orthographicCamera attach="shadow-camera" args={[-100, 100, 100, -100]} />
-      </directionalLight>
+      />
     </>
   );
 }
@@ -167,7 +164,6 @@ export default function Home() {
           className="w-full h-full"
           dpr={[1, dprMax]}
           camera={{ position: [0, 6, 25], fov: 45 }}
-          shadows
           gl={{
             antialias: true,
             powerPreference: "high-performance",
