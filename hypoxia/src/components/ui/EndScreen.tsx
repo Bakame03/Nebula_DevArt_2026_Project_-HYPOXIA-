@@ -105,10 +105,40 @@ export default function EndScreen({ visible }: EndScreenProps) {
     c.font = `${Math.round(18 * s)}px monospace`;
     c.fillText(`Dommages permanents : ${(permanentDamage * 100).toFixed(1)}%`, 60 * s, tmp.height - 60 * s);
 
-    const link = document.createElement("a");
-    link.download = `hypoxia-echo-${Date.now()}.png`;
-    link.href = tmp.toDataURL("image/png");
-    link.click();
+    const filename = `hypoxia-echo-${Date.now()}.png`;
+
+    const download = () => {
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = tmp.toDataURL("image/png");
+      link.click();
+    };
+
+    tmp.toBlob(async (blob) => {
+      if (!blob) {
+        download();
+        return;
+      }
+      const file = new File([blob], filename, { type: "image/png" });
+
+      // Prefer the native share sheet — on mobile a download is unreliable
+      // (esp. iOS Safari), and sharing the scar straight to social is the point.
+      // Fall back to a download where file-sharing isn't supported.
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: "HYPOXIA — ma cicatrice",
+            text: `J'ai généré ${co2Grams.toFixed(3)} g de CO₂ en un seul prompt. Et vous ?`,
+          });
+          return;
+        } catch (err) {
+          // User dismissed the share sheet — don't then force a download on them.
+          if (err instanceof DOMException && err.name === "AbortError") return;
+        }
+      }
+      download();
+    }, "image/png");
   }, [co2Grams, permanentDamage]);
 
   return (
