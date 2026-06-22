@@ -42,12 +42,12 @@ export default function WhisperVoices() {
 
   // Load voices asynchronously (required by some browsers)
   useEffect(() => {
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.getVoices(); // warm-up
-      window.speechSynthesis.addEventListener("voiceschanged", () => {
-        window.speechSynthesis.getVoices(); // refresh
-      });
-    }
+    if (!("speechSynthesis" in window)) return;
+    const refresh = () => window.speechSynthesis.getVoices();
+    refresh(); // warm-up
+    window.speechSynthesis.addEventListener("voiceschanged", refresh);
+    return () =>
+      window.speechSynthesis.removeEventListener("voiceschanged", refresh);
   }, []);
 
   useEffect(() => {
