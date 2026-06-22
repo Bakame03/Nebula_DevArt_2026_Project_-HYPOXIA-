@@ -70,11 +70,16 @@ export default function FaviconManager() {
     linkRef.current = link;
   }, []);
 
+  // Quantise to ~2% steps so the 32px canvas is only regenerated when the icon
+  // would visibly change — not on every keystroke, recovery tick or damage-floor
+  // nudge (drawFavicon + toDataURL ran on every one before).
+  const faviconStress = Math.round(stressLevel * 50) / 50;
+
   useEffect(() => {
     if (!linkRef.current) return;
-    const dataUrl = drawFavicon(stressLevel);
+    const dataUrl = drawFavicon(faviconStress);
     if (dataUrl) linkRef.current.href = dataUrl;
-  }, [stressLevel]);
+  }, [faviconStress]);
 
   return null;
 }
