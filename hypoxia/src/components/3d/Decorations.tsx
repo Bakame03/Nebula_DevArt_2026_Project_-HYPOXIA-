@@ -135,7 +135,6 @@ export default function Decorations() {
                     map={grassSprite}
                     color={fernColor}
                     alphaTest={0.5}
-                    transparent
                     side={THREE.DoubleSide}
                     roughness={0.8}
                     metalness={0.0}

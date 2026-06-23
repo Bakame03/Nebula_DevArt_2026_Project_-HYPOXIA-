@@ -100,7 +100,6 @@ export default function Animals() {
             <meshStandardMaterial
                 map={deerTexture}
                 alphaTest={0.5}
-                transparent
                 side={THREE.DoubleSide}
                 roughness={0.8}
                 metalness={0.0}

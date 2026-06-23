@@ -82,7 +82,6 @@ export default function Birds() {
             <meshStandardMaterial
                 map={birdTexture}
                 alphaTest={0.5}
-                transparent
                 side={THREE.DoubleSide}
                 roughness={0.6}
                 depthWrite={true}
