@@ -10,6 +10,7 @@ import seededRandom from "@/utils/seededRandom";
 const tempObject = new THREE.Object3D();
 
 export default function Animals() {
+    const { stressLevel } = useStore();
     const meshRef = useRef<THREE.InstancedMesh>(null);
 
     const ANIMAL_COUNT = 30;
@@ -55,7 +56,6 @@ export default function Animals() {
     useFrame((state) => {
         if (!meshRef.current) return;
 
-        const stressLevel = useStore.getState().stressLevel;
         const time = state.clock.getElapsedTime();
         const camera = state.camera;
 
@@ -100,6 +100,7 @@ export default function Animals() {
             <meshStandardMaterial
                 map={deerTexture}
                 alphaTest={0.5}
+                transparent
                 side={THREE.DoubleSide}
                 roughness={0.8}
                 metalness={0.0}

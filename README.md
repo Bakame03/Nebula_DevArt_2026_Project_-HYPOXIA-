@@ -39,12 +39,12 @@ C'est la matérialisation de **l'Écho** : la répercussion d'une onde qui revie
 
 Nous avons utilisé une architecture moderne orientée "Creative Web" pour garantir performance et immersion.
 
-* **Core :** [Next.js 16](https://nextjs.org/) (React 19)
+* **Core :** [Next.js 14](https://nextjs.org/) (React)
 * **3D Engine :** [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) (Three.js)
 * **VFX / Shaders :** [React Postprocessing](https://docs.pmnd.rs/react-postprocessing) (Vignette, Noise, Glitch, Chromatic Aberration)
 * **State Management :** [Zustand](https://github.com/pmndrs/zustand) (Gestion du stress global et des dégâts permanents)
 * **Animation 2D :** [Framer Motion](https://www.framer.com/motion/)
-* **Audio Engine :** [Web Audio API](https://developer.mozilla.org/fr/docs/Web/API/Web_Audio_API) (synthèse procédurale : oscillateurs + bruit rose)
+* **Audio Engine :** [Howler.js](https://howlerjs.com/)
 
 ---
 

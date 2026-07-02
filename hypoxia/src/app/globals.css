@@ -14,13 +14,10 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   overflow: hidden;
-  cursor: none;
-}
-
-/* Hide the native I-beam over the textarea too, so only the custom animated
-   cursor shows while typing (see CustomCursor). */
-textarea {
-  cursor: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 }
 
 /* ─── Scrollbar Hider ─────────────────────────────────────────────────────── */

@@ -4,9 +4,6 @@ import { useRef, useCallback } from "react";
 import type { Variants } from "framer-motion";
 import { motion } from "framer-motion";
 import { useStore } from "@/store/useStore";
-import { bpmFromStress } from "@/utils/heartbeat";
-import { usePrefersReducedMotion } from "@/utils/usePrefersReducedMotion";
-import HeartbeatMonitor from "./HeartbeatMonitor";
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
@@ -97,27 +94,17 @@ function ResetIcon({ color = "currentColor" }: { color?: string }) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-interface PromptInputProps {
-  cinematicMode: boolean;
-  onToggleCinematic: () => void;
-}
-
-export default function PromptInput({ cinematicMode, onToggleCinematic }: PromptInputProps) {
+export default function PromptInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const promptText = useStore((s) => s.promptText);
   const stressLevel = useStore((s) => s.stressLevel);
   const permanentDamage = useStore((s) => s.permanentDamage);
   const maxTokens = useStore((s) => s.maxTokens);
-  const co2Grams = useStore((s) => s.co2Grams);
   const setPrompt = useStore((s) => s.setPrompt);
   const reset = useStore((s) => s.reset);
 
-  const reducedMotion = usePrefersReducedMotion();
   const isCritical = stressLevel > 0.8;
-  // When reduced motion is requested, keep the critical styling but stop the
-  // shaking bar and pulsing buttons.
-  const animateCritical = isCritical && !reducedMotion;
 
   const handleTextareaChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -164,7 +151,7 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
       <motion.div
         className="pointer-events-auto w-[90vw] max-w-[1100px]" // Very wide
         variants={shakeVariants}
-        animate={animateCritical ? "shake" : "idle"}
+        animate={isCritical ? "shake" : "idle"}
       >
         {/* ── Liquid Glass Bar ──────────────────────────────────────────── */}
         <div
@@ -227,7 +214,7 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
                   : "rgba(255,255,255,0.10)",
               }}
               variants={btnPulseVariants}
-              animate={animateCritical ? "critical" : "idle"}
+              animate={isCritical ? "critical" : "idle"}
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}
               aria-label="Ajouter un fichier"
@@ -286,7 +273,7 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
               className="relative z-10 flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300"
               style={{ backgroundColor: sendBtnBg }}
               variants={btnPulseVariants}
-              animate={animateCritical ? "critical" : "idle"}
+              animate={isCritical ? "critical" : "idle"}
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}
               aria-label="Envoyer"
@@ -295,30 +282,27 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
             </motion.button>
           </div>
 
+          {/* ── Oxygen Warning Overlay ── */}
+          {promptText.length >= maxTokens && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/80 rounded-[1.5rem] md:rounded-[2rem] z-20 backdrop-blur-sm"
+            >
+              <div className="flex flex-col items-center gap-2 text-red-500 animate-pulse">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                </svg>
+                <span className="font-bold tracking-[0.2em] text-xs uppercase">Oxygène Épuisé</span>
+              </div>
+            </motion.div>
+          )}
         </div>
 
-        {/* ── HUD Below: Heartbeat + Integrity + Tokens + Écho ─────────────── */}
+        {/* ── HUD Below: Integrity + Tokens + Écho ──────────────────────── */}
         <div className="flex items-center justify-between px-2 pt-2 md:px-8 md:pt-3">
-          {/* Heartbeat Monitor — EKG canvas + BPM */}
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col items-end leading-none">
-              <span
-                className="font-mono text-[9px] md:text-[10px] font-black tabular-nums"
-                style={{
-                  color: stressLevel > 0.5
-                    ? `rgb(${Math.round(stressLevel * 255)},${Math.round(220 - stressLevel * 180)},40)`
-                    : "rgba(255,255,255,0.3)",
-                }}
-              >
-                {Math.round(bpmFromStress(stressLevel))}
-              </span>
-              <span className="text-[6px] md:text-[7px] font-bold uppercase tracking-widest text-white/15">
-                BPM
-              </span>
-            </div>
-            <HeartbeatMonitor />
-          </div>
-
           {/* System Integrity */}
           <div className="flex items-center gap-2 md:gap-3">
             <span
@@ -360,19 +344,6 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
             </span>
           </div>
 
-          {/* CO₂ counter */}
-          <div className="flex items-center gap-1 md:gap-1.5">
-            <span
-              className="font-mono text-[10px] md:text-[11px] font-bold tabular-nums tracking-wider"
-              style={{ color: co2Grams > 0 ? "#ff6b35" : "rgba(255,255,255,0.3)" }}
-            >
-              {(co2Grams * 1000).toFixed(0)}
-            </span>
-            <span className="text-[8px] md:text-[9px] font-semibold text-white/25">
-              mg CO₂
-            </span>
-          </div>
-
           {/* Token counter */}
           <div className="flex items-center gap-1 md:gap-1.5">
             <span
@@ -387,30 +358,11 @@ export default function PromptInput({ cinematicMode, onToggleCinematic }: Prompt
               / {maxTokens}
             </span>
             <span className="text-[7px] md:text-[8px] font-semibold uppercase tracking-[0.15em] text-white/12">
-              tk
+              Tokens
             </span>
           </div>
         </div>
-      </motion.div>
-
-      {/* ── Cinematic mode toggle ──────────────────────────────────────────── */}
-      <motion.button
-        type="button"
-        onClick={onToggleCinematic}
-        className="pointer-events-auto absolute bottom-6 right-6 flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-black/30"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5, duration: 0.6 }}
-        aria-label="Basculer le mode cinématique"
-      >
-        <span
-          className="h-1.5 w-1.5 rounded-full"
-          style={{ backgroundColor: cinematicMode ? "#00ffaa" : "rgba(255,255,255,0.25)" }}
-        />
-        <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/40">
-          {cinematicMode ? "Cinematic" : "Manual"} · C
-        </span>
-      </motion.button>
+      </motion.div >
     </div >
   );
 }

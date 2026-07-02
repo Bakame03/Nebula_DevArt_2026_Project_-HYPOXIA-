@@ -1,6 +1,7 @@
 "use client";
 import { useStore } from "@/store/useStore";
 import { useRef, useMemo, useLayoutEffect } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTexture } from "@react-three/drei";
 import { getTerrainHeight, riverCurve } from "@/utils/terrainLogic";
@@ -9,8 +10,7 @@ import seededRandom from "@/utils/seededRandom";
 const tempObject = new THREE.Object3D();
 
 export default function Decorations() {
-    const stressLevel = useStore((s) => s.stressLevel);
-    const permanentDamage = useStore((s) => s.permanentDamage);
+    const { stressLevel, permanentDamage } = useStore();
     const rockMesh = useRef<THREE.InstancedMesh>(null);
     const grassMesh = useRef<THREE.InstancedMesh>(null);
 
@@ -107,12 +107,11 @@ export default function Decorations() {
         }
     }, [rocks, ferns]);
 
-    const fernColor = useMemo(() => {
-        return new THREE.Color("#16a34a").lerp(
-            new THREE.Color("#4b3621"),
-            Math.min(stressLevel + permanentDamage, 1),
-        );
-    }, [stressLevel, permanentDamage]);
+    // Fern Color: Vibrant Green -> Dead Brown based on stress
+    const fernColor = new THREE.Color("#16a34a").lerp(
+        new THREE.Color("#4b3621"),
+        Math.min(stressLevel + permanentDamage, 1)
+    );
 
     return (
         <group>
@@ -135,6 +134,7 @@ export default function Decorations() {
                     map={grassSprite}
                     color={fernColor}
                     alphaTest={0.5}
+                    transparent
                     side={THREE.DoubleSide}
                     roughness={0.8}
                     metalness={0.0}
